@@ -255,6 +255,10 @@ PHASE 3.5  Career Intelligence Layer          ← added: review round 1
 PHASE 3.7  Behavioral Intelligence Layer      ← added: review round 2
 PHASE 4    Data Integrity Engine
 PHASE 5    Retrieval Infrastructure
+PHASE 5.5  Broad Eligibility Filter          ← added: review round 4 [NEW]
+               ↓
+          TOP 20,000 CANDIDATES
+               ↓
 PHASE 6    Hybrid Retrieval
                ↓
           TOP 3000 CANDIDATES  [top_k: LOCKED]
@@ -1552,10 +1556,22 @@ data/artifacts/bm25.pkl
 
 ---
 
+## PHASE 5.5 — BROAD ELIGIBILITY FILTER
+
+### Goal
+Safely reduce the 100,000 candidate pool down to ~20,000 before dense retrieval. This is not a ranking stage, but a soft filter to eliminate obvious non-relevant categories (e.g., HR, Marketing, Sales) to improve speed, lower memory pressure, and increase precision in the dense retrieval step.
+
+### Implementation Steps
+1. Filter out candidates whose current or past titles strictly align with non-technical roles.
+2. Keep candidates mentioning: ML, Data Science, AI, Search, Recommendation, Backend, Software Engineer.
+3. Pass the remaining ~20,000 candidates to Phase 6.
+
+---
+
 ## PHASE 6 — HYBRID RETRIEVAL
 
 ### Goal
-Reduce 100,000 candidates to the Top 3,000 while maintaining extremely high recall. This pool must contain essentially all truly relevant candidates — any relevant candidate missed here is permanently lost.
+Reduce the ~20,000 broadly eligible candidates to the Top 3,000 while maintaining extremely high recall. This pool must contain essentially all truly relevant candidates — any relevant candidate missed here is permanently lost.
 
 ### Prerequisites
 - Phases 1–5 complete

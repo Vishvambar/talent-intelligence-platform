@@ -14,6 +14,35 @@ faiss:
   nbits: 8        # INITIAL
   nprobe: 50      # INITIAL
 
+llm:
+  provider_priority:
+    phase01:
+      - gemini
+      - cerebras
+      - groq
+      - github_models
+      - openrouter
+    phase07:
+      - groq
+      - cerebras
+      - gemini
+      - github_models
+      - openrouter
+    phase10:
+      - gemini
+      - cerebras
+      - groq
+      - github_models
+      - openrouter
+  max_retries: 3
+  cache_responses: true
+  cache_version: v1
+  store_raw_output: true
+  timeout_seconds: 60
+  require_json_mode: true
+  validate_schema: true
+  auto_retry_on_invalid_json: true
+
 teacher:
   temperature: 0          # ✅ LOCKED
   runs_per_candidate: 3
