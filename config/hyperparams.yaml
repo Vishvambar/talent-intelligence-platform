@@ -2,26 +2,34 @@ retrieval:
   top_k: 3000           # ⚠️ LOCKED — do not change without re-running phases 7A, 7B, 7C, 10, and 11
                          # Changing top_k cascades through: teacher cost, pairwise cost,
                          # reasoning bank size, and runtime. Treat as an architectural constant.
-  dense_weight: 0.35
-  bm25_weight: 0.25
-  ontology_weight: 0.25
-  career_weight: 0.15
-  faiss_nlist: 512
-  faiss_m: 64
-  faiss_nbits: 8
-  faiss_nprobe: 50
+  dense_weight: 0.35      # INITIAL
+  bm25_weight: 0.25       # INITIAL
+  ontology_weight: 0.25   # INITIAL
+  career_weight: 0.15     # INITIAL
+
+faiss:
+  index_type: IVF_PQ
+  nlist: 512      # INITIAL
+  m: 64           # INITIAL
+  nbits: 8        # INITIAL
+  nprobe: 50      # INITIAL
 
 teacher:
-  temperature: 0
+  temperature: 0          # ✅ LOCKED
   runs_per_candidate: 3
   aggregation: median
-  technical_weight: 0.45
-  evaluation_weight: 0.35
-  execution_weight: 0.20
+  store_mean: true
+  store_std: true
+  store_confidence: true
+  technical_weight: 0.45  # INITIAL
+  evaluation_weight: 0.35 # INITIAL
+  execution_weight: 0.20  # INITIAL
 
 pairwise:
   pool_size: 300
   score_window: 15  # only compare if |score_a - score_b| < 15
+  bidirectional_check: true
+  conflict_resolution: absolute_score
 
 ltr:
   learning_rate: 0.05
@@ -29,10 +37,14 @@ ltr:
   max_depth: 8
   n_estimators: 500
   early_stopping_rounds: 50
+  primary_model: lightgbm_huber
+  challenger_models:
+    - lightgbm_lambdarank
+    - xgboost
 
 ensemble:
-  lgbm_weight: 0.6
-  xgb_weight: 0.4
+  lgbm_weight: 0.6        # INITIAL
+  xgb_weight: 0.4         # INITIAL
 
 elite_rerank:
   pool_size: 20
@@ -48,6 +60,7 @@ behavioral:
   response_rate_weight: 0.30
   response_time_weight: 0.15
   notice_period_weight: 0.15
+  offer_acceptance_weight: 0.10
   # Market demand weights
   saved_by_recruiters_multiplier: 3
   search_appearance_multiplier: 1
@@ -59,6 +72,28 @@ behavioral:
 
 integrity:
   fraud_hard_remove_threshold: 0.98
+  hard_remove_requires_severe_anomaly: true
   minor_anomaly_penalty: -2
   medium_anomaly_penalty: -5
   severe_anomaly_penalty: -25
+
+label_quality:
+  min_score_range: 60
+  min_teacher_std: 5
+  max_teacher_std: 25
+
+reasoning:
+  diversity_threshold: 0.95
+  require_gap: true
+  require_alignment: true
+  require_numeric_evidence: true
+
+runtime:
+  max_runtime_seconds: 300
+  max_memory_gb: 16
+
+submission:
+  top_n: 100
+  normalize_scores: true
+  require_unique_ids: true
+  validate_before_export: true
