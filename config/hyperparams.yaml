@@ -1,0 +1,64 @@
+retrieval:
+  top_k: 3000           # ⚠️ LOCKED — do not change without re-running phases 7A, 7B, 7C, 10, and 11
+                         # Changing top_k cascades through: teacher cost, pairwise cost,
+                         # reasoning bank size, and runtime. Treat as an architectural constant.
+  dense_weight: 0.35
+  bm25_weight: 0.25
+  ontology_weight: 0.25
+  career_weight: 0.15
+  faiss_nlist: 512
+  faiss_m: 64
+  faiss_nbits: 8
+  faiss_nprobe: 50
+
+teacher:
+  temperature: 0
+  runs_per_candidate: 3
+  aggregation: median
+  technical_weight: 0.45
+  evaluation_weight: 0.35
+  execution_weight: 0.20
+
+pairwise:
+  pool_size: 300
+  score_window: 15  # only compare if |score_a - score_b| < 15
+
+ltr:
+  learning_rate: 0.05
+  num_leaves: 63
+  max_depth: 8
+  n_estimators: 500
+  early_stopping_rounds: 50
+
+ensemble:
+  lgbm_weight: 0.6
+  xgb_weight: 0.4
+
+elite_rerank:
+  pool_size: 20
+  evaluation_weight: 0.30
+  founding_team_weight: 0.25
+  availability_weight: 0.20
+  teacher_median_weight: 0.15
+  teacher_std_penalty: 0.10
+
+behavioral:
+  # Availability score weights
+  active_recency_weight: 0.40
+  response_rate_weight: 0.30
+  response_time_weight: 0.15
+  notice_period_weight: 0.15
+  # Market demand weights
+  saved_by_recruiters_multiplier: 3
+  search_appearance_multiplier: 1
+  profile_views_multiplier: 0.5
+  # Thresholds
+  inactive_baseline_days: 365
+  max_response_hours: 168  # 1 week
+  max_notice_days: 180    # 6 months
+
+integrity:
+  fraud_hard_remove_threshold: 0.98
+  minor_anomaly_penalty: -2
+  medium_anomaly_penalty: -5
+  severe_anomaly_penalty: -25
