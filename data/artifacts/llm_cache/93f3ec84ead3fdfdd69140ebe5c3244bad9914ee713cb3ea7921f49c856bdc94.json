@@ -1,0 +1,218 @@
+{
+  "hard_requirements": {
+    "production_experience_with_embeddings_based_retrieval_systems": {
+      "required": true,
+      "importance": 10,
+      "confidence": 1.0,
+      "evidence": [
+        "Production experience with embeddings-based retrieval systems deployed to real users."
+      ],
+      "canonical_terms": [
+        "embeddings-based retrieval systems"
+      ],
+      "synonyms": []
+    },
+    "production_experience_with_vector_databases": {
+      "required": true,
+      "importance": 10,
+      "confidence": 1.0,
+      "evidence": [
+        "Production experience with vector databases or hybrid search infrastructure."
+      ],
+      "canonical_terms": [
+        "vector databases",
+        "hybrid search infrastructure"
+      ],
+      "synonyms": []
+    },
+    "strong_python": {
+      "required": true,
+      "importance": 10,
+      "confidence": 1.0,
+      "evidence": [
+        "Strong Python. Yes really, we care about code quality."
+      ],
+      "canonical_terms": [
+        "Python"
+      ],
+      "synonyms": []
+    },
+    "hands_on_experience_designing_evaluation_frameworks": {
+      "required": true,
+      "importance": 10,
+      "confidence": 1.0,
+      "evidence": [
+        "Hands-on experience designing evaluation frameworks for ranking systems."
+      ],
+      "canonical_terms": [
+        "evaluation frameworks",
+        "ranking systems"
+      ],
+      "synonyms": []
+    }
+  },
+  "preferred_requirements": {
+    "llm_fine_tuning_experience": {
+      "required": false,
+      "importance": 5,
+      "confidence": 0.8,
+      "evidence": [
+        "LLM fine-tuning experience (LoRA, QLoRA, PEFT)."
+      ],
+      "canonical_terms": [
+        "LLM fine-tuning"
+      ],
+      "synonyms": []
+    },
+    "experience_with_learning_to_rank_models": {
+      "required": false,
+      "importance": 5,
+      "confidence": 0.8,
+      "evidence": [
+        "Experience with learning-to-rank models (XGBoost-based or neural)."
+      ],
+      "canonical_terms": [
+        "learning-to-rank models"
+      ],
+      "synonyms": []
+    },
+    "prior_exposure_to_hr_tech": {
+      "required": false,
+      "importance": 5,
+      "confidence": 0.7,
+      "evidence": [
+        "Prior exposure to HR-tech, recruiting tech, or marketplace products."
+      ],
+      "canonical_terms": [
+        "HR-tech",
+        "recruiting tech",
+        "marketplace products"
+      ],
+      "synonyms": []
+    },
+    "background_in_distributed_systems": {
+      "required": false,
+      "importance": 5,
+      "confidence": 0.7,
+      "evidence": [
+        "Background in distributed systems or large-scale inference optimization."
+      ],
+      "canonical_terms": [
+        "distributed systems",
+        "large-scale inference optimization"
+      ],
+      "synonyms": []
+    },
+    "open_source_contributions_in_ai_ml": {
+      "required": false,
+      "importance": 5,
+      "confidence": 0.6,
+      "evidence": [
+        "Open-source contributions in the AI/ML space."
+      ],
+      "canonical_terms": [
+        "open-source contributions",
+        "AI",
+        "ML"
+      ],
+      "synonyms": []
+    }
+  },
+  "negative_signals": {
+    "pure_research_experience": {
+      "penalty_strength": 10,
+      "confidence": 1.0,
+      "evidence": [
+        "If you've spent your career in pure research environments without any production deployment."
+      ],
+      "canonical_terms": [
+        "pure research environments",
+        "academic labs",
+        "research-only roles"
+      ],
+      "synonyms": []
+    },
+    "recent_langchain_experience": {
+      "penalty_strength": 10,
+      "confidence": 1.0,
+      "evidence": [
+        "If your 'AI experience' consists primarily of recent projects using LangChain to call OpenAI."
+      ],
+      "canonical_terms": [
+        "LangChain",
+        "OpenAI"
+      ],
+      "synonyms": []
+    },
+    "lack_of_production_code": {
+      "penalty_strength": 10,
+      "confidence": 1.0,
+      "evidence": [
+        "If you are a senior engineer who hasn't written production code in the last 18 months."
+      ],
+      "canonical_terms": [
+        "production code"
+      ],
+      "synonyms": []
+    },
+    "title_chasers": {
+      "penalty_strength": 10,
+      "confidence": 1.0,
+      "evidence": [
+        "If your career trajectory shows you optimizing for 'Senior' → 'Staff' → 'Principal' titles by switching companies every 1.5 years."
+      ],
+      "canonical_terms": [
+        "title-chasers"
+      ],
+      "synonyms": []
+    },
+    "framework_enthusiasts": {
+      "penalty_strength": 10,
+      "confidence": 1.0,
+      "evidence": [
+        "If your GitHub is full of LangChain tutorials and your blog posts are 'How I used [hot framework] to build [demo]'."
+      ],
+      "canonical_terms": [
+        "framework enthusiasts"
+      ],
+      "synonyms": []
+    },
+    "consulting_firm_experience": {
+      "penalty_strength": 10,
+      "confidence": 1.0,
+      "evidence": [
+        "People who have only worked at consulting firms in their entire career."
+      ],
+      "canonical_terms": [
+        "consulting firms"
+      ],
+      "synonyms": []
+    },
+    "narrow_expertise": {
+      "penalty_strength": 10,
+      "confidence": 1.0,
+      "evidence": [
+        "People whose primary expertise is computer vision, speech, or robotics without significant NLP/IR exposure."
+      ],
+      "canonical_terms": [
+        "computer vision",
+        "speech",
+        "robotics",
+        "NLP",
+        "IR"
+      ],
+      "synonyms": []
+    },
+    "closed_source_experience": {
+      "penalty_strength": 10,
+      "confidence": 1.0,
+      "evidence": [
+        "People whose work has been entirely on closed-source proprietary systems for 5+ years without external validation."
+      ],
+      "canonical_terms": [
+        "closed-source proprietary systems"
+      ],
+      "synonyms": []
+    }
+  }
+}

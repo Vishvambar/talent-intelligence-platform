@@ -1,0 +1,443 @@
+{
+  "jd_dimensions": {
+    "technical_depth": 8,
+    "retrieval_expertise": 9,
+    "evaluation_expertise": 9,
+    "startup_builder": 10,
+    "founding_team_fit": 10,
+    "research_focus": 2,
+    "consulting_fit": 1
+  },
+  "experience_constraints": {
+    "min_years": 5,
+    "max_years": 9,
+    "preferred_years": [
+      6,
+      7,
+      8
+    ]
+  },
+  "hard_requirements": {
+    "evaluation_frameworks": {
+      "required": true,
+      "importance": 9,
+      "confidence": 1.0,
+      "evidence": [
+        "Hands-on experience designing evaluation frameworks for ranking systems \u2014 NDCG, MRR, MAP, offline-to-online correlation, A/B test interpretation."
+      ],
+      "canonical_terms": [
+        "search evaluation",
+        "information retrieval metrics",
+        "ranking evaluation",
+        "evaluation framework"
+      ],
+      "synonyms": [
+        "offline benchmarks",
+        "MRR",
+        "ranking evaluation",
+        "offline evaluation",
+        "online evaluation",
+        "search metrics",
+        "MAP",
+        "search evaluation",
+        "A/B testing",
+        "NDCG"
+      ]
+    },
+    "python_programming": {
+      "required": true,
+      "importance": 8,
+      "confidence": 1.0,
+      "evidence": [
+        "Strong Python. Yes really, we care about code quality."
+      ],
+      "canonical_terms": [
+        "software engineering",
+        "Python"
+      ],
+      "synonyms": [
+        "Python programming",
+        "production code",
+        "Python development"
+      ]
+    },
+    "product_engineering_background": {
+      "required": true,
+      "importance": 9,
+      "confidence": 0.95,
+      "evidence": [
+        "Scrappy product-engineering attitude \u2014 willing to ship a working ranker in a week even if the underlying ML is 'obviously suboptimal,' because we need to learn from real users before we know what to actually optimize for."
+      ],
+      "canonical_terms": [
+        "product engineering"
+      ],
+      "synonyms": [
+        "shipper mindset",
+        "pragmatic delivery",
+        "scrappy engineering"
+      ]
+    },
+    "production_coding": {
+      "required": true,
+      "importance": 10,
+      "confidence": 1.0,
+      "evidence": [
+        "If you are a senior engineer who hasn't written production code in the last 18 months because you've moved into 'architecture' or 'tech lead' roles \u2014 we will probably not move forward. This role writes code."
+      ],
+      "canonical_terms": [
+        "production deployment"
+      ],
+      "synonyms": [
+        "shipping production code",
+        "hands-on coding"
+      ]
+    },
+    "embeddings_retrieval": {
+      "required": true,
+      "importance": 9,
+      "confidence": 1.0,
+      "evidence": [
+        "Production experience with embeddings-based retrieval systems (sentence-transformers, OpenAI embeddings, BGE, E5, or similar) deployed to real users."
+      ],
+      "canonical_terms": [
+        "embeddings",
+        "sentence-transformers",
+        "dense retrieval",
+        "embeddings-based retrieval"
+      ],
+      "synonyms": [
+        "dense retrieval",
+        "embedding models",
+        "vector embeddings",
+        "semantic search",
+        "vector search"
+      ]
+    },
+    "vector_databases": {
+      "required": true,
+      "importance": 9,
+      "confidence": 1.0,
+      "evidence": [
+        "Production experience with vector databases or hybrid search infrastructure \u2014 Pinecone, Weaviate, Qdrant, Milvus, OpenSearch, Elasticsearch, FAISS, or something similar."
+      ],
+      "canonical_terms": [
+        "vector database",
+        "vector search",
+        "hybrid search"
+      ],
+      "synonyms": [
+        "approximate nearest neighbor search",
+        "vector index",
+        "hybrid search infrastructure"
+      ]
+    },
+    "async_writing_culture": {
+      "required": true,
+      "importance": 8,
+      "confidence": 0.9,
+      "evidence": [
+        "We work async-first and write a lot. If you find writing painful, you'll find this role painful."
+      ],
+      "canonical_terms": [
+        "written communication"
+      ],
+      "synonyms": [
+        "async-first",
+        "technical writing",
+        "documentation culture"
+      ]
+    },
+    "production_ml_deployment": {
+      "required": true,
+      "importance": 10,
+      "confidence": 0.95,
+      "evidence": [
+        "Production experience with embeddings-based retrieval systems (sentence-transformers, OpenAI embeddings, BGE, E5, or similar) deployed to real users."
+      ],
+      "canonical_terms": [
+        "production deployment"
+      ],
+      "synonyms": [
+        "deployed systems",
+        "shipping models",
+        "production ML"
+      ]
+    }
+  },
+  "preferred_requirements": {
+    "domain_experience": {
+      "required": false,
+      "importance": 6,
+      "confidence": 0.85,
+      "evidence": [
+        "Prior exposure to HR-tech, recruiting tech, or marketplace products"
+      ],
+      "canonical_terms": [
+        "marketplace domain knowledge",
+        "HR technology"
+      ],
+      "synonyms": [
+        "marketplace products",
+        "recruitment technology",
+        "recruiting tech",
+        "HR-tech",
+        "two-sided marketplace"
+      ]
+    },
+    "llm_fine_tuning": {
+      "required": false,
+      "importance": 6,
+      "confidence": 0.9,
+      "evidence": [
+        "LLM fine-tuning experience (LoRA, QLoRA, PEFT)"
+      ],
+      "canonical_terms": [
+        "parameter-efficient fine-tuning",
+        "large language models",
+        "LLM fine-tuning"
+      ],
+      "synonyms": [
+        "LoRA",
+        "QLoRA",
+        "parameter-efficient fine-tuning",
+        "PEFT",
+        "LLM fine-tuning"
+      ]
+    },
+    "distributed_systems": {
+      "required": false,
+      "importance": 5,
+      "confidence": 0.95,
+      "evidence": [
+        "Background in distributed systems or large-scale inference optimization"
+      ],
+      "canonical_terms": [
+        "distributed systems",
+        "inference optimization"
+      ],
+      "synonyms": [
+        "model optimization",
+        "high-throughput inference",
+        "inference optimization",
+        "scalability",
+        "large-scale inference"
+      ]
+    },
+    "learning_to_rank": {
+      "required": false,
+      "importance": 6,
+      "confidence": 0.9,
+      "evidence": [
+        "Experience with learning-to-rank models (XGBoost-based or neural)"
+      ],
+      "canonical_terms": [
+        "learning to rank",
+        "ranking models"
+      ],
+      "synonyms": [
+        "pairwise ranking",
+        "ranking models",
+        "neural ranking",
+        "LTR",
+        "XGBoost ranker"
+      ]
+    },
+    "open_source_contributions": {
+      "required": false,
+      "importance": 5,
+      "confidence": 0.8,
+      "evidence": [
+        "Open-source contributions in the AI/ML space"
+      ],
+      "canonical_terms": [
+        "open-source contributions"
+      ],
+      "synonyms": [
+        "OSS contributions"
+      ]
+    }
+  },
+  "negative_signals": {
+    "non_nlp_domains": {
+      "penalty_strength": 7,
+      "confidence": 0.95,
+      "evidence": [
+        "People whose primary expertise is computer vision, speech, or robotics without significant NLP/IR exposure."
+      ],
+      "canonical_terms": [
+        "computer vision",
+        "robotics",
+        "speech recognition"
+      ],
+      "synonyms": [
+        "audio processing",
+        "image processing",
+        "robotics",
+        "speech recognition",
+        "non-NLP ML",
+        "non-NLP domains"
+      ]
+    },
+    "title_chasers": {
+      "penalty_strength": 8,
+      "confidence": 0.9,
+      "evidence": [
+        "Title-chasers. If your career trajectory shows you optimizing for 'Senior' -> 'Staff' -> 'Principal' titles by switching companies every 1.5 years, we're not a fit."
+      ],
+      "canonical_terms": [
+        "job hopping"
+      ],
+      "synonyms": [
+        "title chasing",
+        "short tenure",
+        "frequent job switching",
+        "frequent job changes"
+      ]
+    },
+    "langchain_only_experience": {
+      "penalty_strength": 8,
+      "confidence": 0.95,
+      "evidence": [
+        "If your 'AI experience' consists primarily of recent (under 12 months) projects using LangChain to call OpenAI \u2014 we will probably not move forward, unless you can demonstrate substantial pre-LLM-era ML production experience.",
+        "If your 'AI experience' consists primarily of recent (under 12 months) projects using LangChain to call OpenAI \u2014 we will probably not move forward",
+        "Framework enthusiasts. If your GitHub is full of LangChain tutorials and your blog posts are 'How I used [hot framework] to build [demo]' \u2014 that's fine but it's not what we need."
+      ],
+      "canonical_terms": [
+        "toy AI projects",
+        "shallow AI",
+        "wrapper development"
+      ],
+      "synonyms": [
+        "framework enthusiasts",
+        "prompt engineering only",
+        "API wrapper development",
+        "API-only AI",
+        "LangChain tutorials"
+      ]
+    },
+    "consulting_only_background": {
+      "penalty_strength": 9,
+      "confidence": 1.0,
+      "evidence": [
+        "People who have only worked at consulting firms (TCS, Infosys, Wipro, Accenture, Cognizant, Capgemini, etc.) in their entire career."
+      ],
+      "canonical_terms": [
+        "IT consulting",
+        "IT consulting background",
+        "professional services"
+      ],
+      "synonyms": [
+        "consulting firms",
+        "IT services",
+        "outsourcing company background",
+        "IT services background",
+        "system integrators",
+        "consulting firm experience"
+      ]
+    },
+    "non_coding_engineers": {
+      "penalty_strength": 8,
+      "confidence": 0.95,
+      "evidence": [
+        "If you are a senior engineer who hasn't written production code in the last 18 months because you've moved into 'architecture' or 'tech lead' roles \u2014 we will probably not move forward."
+      ],
+      "canonical_terms": [
+        "non-coding architect",
+        "hands-off architecture",
+        "hands-off tech lead"
+      ],
+      "synonyms": [
+        "pure architect",
+        "hands-off management",
+        "pure architecture",
+        "hands-off manager",
+        "non-coding tech lead"
+      ]
+    },
+    "pure_research_background": {
+      "penalty_strength": 9,
+      "confidence": 0.988,
+      "evidence": [
+        "If you've spent your career in pure research environments (academic labs, research-only roles) without any production deployment \u2014 we will not move forward."
+      ],
+      "canonical_terms": [
+        "academic research",
+        "academic research focus",
+        "pure research"
+      ],
+      "synonyms": [
+        "non-production ML",
+        "academic labs",
+        "pure research",
+        "theoretical research",
+        "research-only roles",
+        "research-only"
+      ]
+    },
+    "framework_enthusiasts": {
+      "penalty_strength": 7,
+      "confidence": 0.85,
+      "evidence": [
+        "Framework enthusiasts. If your GitHub is full of LangChain tutorials and your blog posts are 'How I used [hot framework] to build [demo]'... We need people who think about systems, not frameworks."
+      ],
+      "canonical_terms": [
+        "framework dependency"
+      ],
+      "synonyms": [
+        "tutorial-driven development",
+        "wrapper builder",
+        "framework enthusiast"
+      ]
+    }
+  },
+  "metadata": {
+    "phase": "phase01",
+    "timestamp": "2026-06-22T15:24:51.373479Z",
+    "successful_lenses": 3,
+    "failed_lenses": 0,
+    "cache_hit_rate": 1.0,
+    "generation_time_seconds": 0.0,
+    "schema_retries": 0,
+    "providers_used": [
+      "cache"
+    ],
+    "semantic_canonicalization": {
+      "status": "success",
+      "duplicates_removed": 5,
+      "merged_concepts": [
+        {
+          "canonical": "domain_experience",
+          "merged": [
+            "marketplace_experience"
+          ]
+        },
+        {
+          "canonical": "title_chasers",
+          "merged": [
+            "job_hopping"
+          ]
+        },
+        {
+          "canonical": "langchain_only_experience",
+          "merged": [
+            "toy_ai_projects",
+            "shallow_ai_experience"
+          ]
+        },
+        {
+          "canonical": "non_coding_engineers",
+          "merged": [
+            "non_coding_leads",
+            "hands_off_architect"
+          ]
+        },
+        {
+          "canonical": "pure_research_background",
+          "merged": [
+            "pure_research_focus"
+          ]
+        }
+      ]
+    }
+  }
+}

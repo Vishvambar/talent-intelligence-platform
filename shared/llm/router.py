@@ -3,12 +3,20 @@ import yaml
 import json
 import hashlib
 import logging
+from dotenv import load_dotenv
 from typing import Dict, Any, Type, TypeVar, Optional
 from pydantic import BaseModel, ValidationError
 from shared.llm.providers.gemini import GeminiProvider
+from shared.llm.providers.groq_provider import GroqProvider
+from shared.llm.providers.cerebras_provider import CerebrasProvider
+from shared.llm.providers.github_models_provider import GitHubModelsProvider
+from shared.llm.providers.openrouter_provider import OpenRouterProvider
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Load environment variables from .env
+load_dotenv()
 
 T = TypeVar('T', bound=BaseModel)
 
@@ -34,6 +42,14 @@ class LLMRouter:
         # Lazily instantiate providers based on available keys
         if os.getenv("GEMINI_API_KEY"):
             self.providers["gemini"] = GeminiProvider()
+        if os.getenv("GROQ_API_KEY"):
+            self.providers["groq"] = GroqProvider()
+        if os.getenv("CEREBRAS_API_KEY"):
+            self.providers["cerebras"] = CerebrasProvider()
+        if os.getenv("GITHUB_TOKEN"):
+            self.providers["github_models"] = GitHubModelsProvider()
+        if os.getenv("OPENROUTER_API_KEY"):
+            self.providers["openrouter"] = OpenRouterProvider()
             
     def _get_cache_path(self, prompt: str, phase: str) -> str:
         prompt_hash = hashlib.sha256(f"{self.cache_version}_{phase}_{prompt}".encode()).hexdigest()

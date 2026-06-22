@@ -1,0 +1,209 @@
+{
+  "jd_dimensions": {
+    "technical_depth": 8,
+    "retrieval_expertise": 9,
+    "evaluation_expertise": 9,
+    "startup_builder": 10,
+    "founding_team_fit": 10,
+    "research_focus": 2,
+    "consulting_fit": 1
+  },
+  "experience_constraints": {
+    "min_years": 5,
+    "max_years": 9,
+    "preferred_years": [6, 7, 8]
+  },
+  "hard_requirements": {
+    "scrappy_product_engineering": {
+      "required": true,
+      "importance": 9,
+      "confidence": 0.95,
+      "evidence": [
+        "Scrappy product-engineering attitude — willing to ship a working ranker in a week even if the underlying ML is 'obviously suboptimal,' because we need to learn from real users before we know what to actually optimize for."
+      ],
+      "canonical_terms": [
+        "product engineering"
+      ],
+      "synonyms": [
+        "shipper mindset",
+        "scrappy engineering",
+        "pragmatic delivery"
+      ]
+    },
+    "async_writing_culture": {
+      "required": true,
+      "importance": 8,
+      "confidence": 0.9,
+      "evidence": [
+        "We work async-first and write a lot. If you find writing painful, you'll find this role painful."
+      ],
+      "canonical_terms": [
+        "written communication"
+      ],
+      "synonyms": [
+        "async-first",
+        "technical writing",
+        "documentation culture"
+      ]
+    },
+    "production_ml_deployment": {
+      "required": true,
+      "importance": 10,
+      "confidence": 0.95,
+      "evidence": [
+        "Production experience with embeddings-based retrieval systems (sentence-transformers, OpenAI embeddings, BGE, E5, or similar) deployed to real users."
+      ],
+      "canonical_terms": [
+        "production deployment"
+      ],
+      "synonyms": [
+        "production ML",
+        "shipping models",
+        "deployed systems"
+      ]
+    },
+    "ranking_evaluation": {
+      "required": true,
+      "importance": 9,
+      "confidence": 0.95,
+      "evidence": [
+        "Hands-on experience designing evaluation frameworks for ranking systems — NDCG, MRR, MAP, offline-to-online correlation, A/B test interpretation."
+      ],
+      "canonical_terms": [
+        "evaluation framework"
+      ],
+      "synonyms": [
+        "ranking evaluation",
+        "offline benchmarks",
+        "search metrics"
+      ]
+    }
+  },
+  "preferred_requirements": {
+    "llm_fine_tuning": {
+      "required": false,
+      "importance": 6,
+      "confidence": 0.85,
+      "evidence": [
+        "LLM fine-tuning experience (LoRA, QLoRA, PEFT)"
+      ],
+      "canonical_terms": [
+        "parameter-efficient fine-tuning"
+      ],
+      "synonyms": [
+        "LLM fine-tuning",
+        "PEFT",
+        "LoRA"
+      ]
+    },
+    "learning_to_rank": {
+      "required": false,
+      "importance": 6,
+      "confidence": 0.85,
+      "evidence": [
+        "Experience with learning-to-rank models (XGBoost-based or neural)"
+      ],
+      "canonical_terms": [
+        "learning to rank"
+      ],
+      "synonyms": [
+        "LTR",
+        "ranking models",
+        "pairwise ranking"
+      ]
+    },
+    "marketplace_experience": {
+      "required": false,
+      "importance": 5,
+      "confidence": 0.8,
+      "evidence": [
+        "Prior exposure to HR-tech, recruiting tech, or marketplace products"
+      ],
+      "canonical_terms": [
+        "marketplace domain knowledge"
+      ],
+      "synonyms": [
+        "HR-tech",
+        "recruiting tech",
+        "two-sided marketplace"
+      ]
+    }
+  },
+  "negative_signals": {
+    "pure_research_background": {
+      "penalty_strength": 9,
+      "confidence": 0.95,
+      "evidence": [
+        "If you've spent your career in pure research environments (academic labs, research-only roles) without any production deployment — we will not move forward."
+      ],
+      "canonical_terms": [
+        "academic research focus"
+      ],
+      "synonyms": [
+        "pure research",
+        "non-production ML",
+        "theoretical research"
+      ]
+    },
+    "title_chasers": {
+      "penalty_strength": 8,
+      "confidence": 0.9,
+      "evidence": [
+        "Title-chasers. If your career trajectory shows you optimizing for 'Senior' -> 'Staff' -> 'Principal' titles by switching companies every 1.5 years, we're not a fit."
+      ],
+      "canonical_terms": [
+        "job hopping"
+      ],
+      "synonyms": [
+        "title chasing",
+        "frequent job switching",
+        "short tenure"
+      ]
+    },
+    "framework_enthusiasts": {
+      "penalty_strength": 7,
+      "confidence": 0.85,
+      "evidence": [
+        "Framework enthusiasts. If your GitHub is full of LangChain tutorials and your blog posts are 'How I used [hot framework] to build [demo]'... We need people who think about systems, not frameworks."
+      ],
+      "canonical_terms": [
+        "framework dependency"
+      ],
+      "synonyms": [
+        "framework enthusiast",
+        "tutorial-driven development",
+        "wrapper builder"
+      ]
+    },
+    "consulting_only_background": {
+      "penalty_strength": 9,
+      "confidence": 0.95,
+      "evidence": [
+        "People who have only worked at consulting firms (TCS, Infosys, Wipro, Accenture, Cognizant, Capgemini, etc.) in their entire career."
+      ],
+      "canonical_terms": [
+        "IT consulting background"
+      ],
+      "synonyms": [
+        "IT services background",
+        "consulting firm experience",
+        "outsourcing company background"
+      ]
+    },
+    "non_coding_leads": {
+      "penalty_strength": 8,
+      "confidence": 0.9,
+      "evidence": [
+        "If you are a senior engineer who hasn't written production code in the last 18 months because you've moved into 'architecture' or 'tech lead' roles — we will probably not move forward."
+      ],
+      "canonical_terms": [
+        "hands-off architecture"
+      ],
+      "synonyms": [
+        "non-coding tech lead",
+        "pure architect",
+        "hands-off manager"
+      ]
+    }
+  }
+}
