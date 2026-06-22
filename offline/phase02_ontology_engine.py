@@ -27,7 +27,7 @@ EXPERT_ONTOLOGY = {
     "SEARCH_RELEVANCE": {
         "weight": 9,
         "children": ["EVALUATION"],
-        "terms": ["search relevance", "search ranking", "ranking model", "relevance ranking"]
+        "terms": ["search relevance", "search ranking", "ranking model", "relevance ranking", "ranking algorithms", "search quality", "ranking", "relevance"]
     },
     "EVALUATION": {
         "weight": 10,
@@ -39,6 +39,16 @@ EXPERT_ONTOLOGY = {
         "children": [],
         "terms": ["experimentation", "online evaluation", "statistical significance"]
     },
+    "ASYNC_WRITING_CULTURE": {
+        "weight": 8,
+        "children": [],
+        "terms": ["written communication", "async-first", "technical writing", "documentation culture", "rfc", "architecture decision record", "adr"]
+    },
+    "OPEN_SOURCE_CONTRIBUTIONS": {
+        "weight": 5,
+        "children": [],
+        "terms": ["open-source contributions", "oss contributions", "open source", "open-source", "github contributor", "maintainer", "pull request", "contributor"]
+    },
     "ML_INFRASTRUCTURE": {
         "weight": 7,
         "children": [],
@@ -47,7 +57,7 @@ EXPERT_ONTOLOGY = {
     "FOUNDING_TEAM": {
         "weight": 10,
         "children": [],
-        "terms": ["founding engineer", "first engineer", "early engineer", "0 to 1", "zero to one", "founding member"]
+        "terms": ["founding engineer", "first engineer", "early engineer", "0 to 1", "zero to one", "founding member", "founder", "co-founder", "cofounder", "0-1", "0-to-1"]
     },
     "OWNERSHIP": {
         "weight": 9,
@@ -67,7 +77,12 @@ EXPERT_ONTOLOGY = {
     "LANGCHAIN_ONLY_EXPERIENCE": {
         "weight": 9,
         "children": [],
-        "terms": ["langchain wrappers", "langchain wrapper", "langchain only", "api wrappers"]
+        "terms": ["langchain wrappers", "langchain wrapper", "langchain only", "api wrappers", "api wrapper", "openai wrapper", "gpt wrapper"]
+    },
+    "CONSULTING_ONLY_BACKGROUND": {
+        "weight": 9,
+        "children": [],
+        "terms": ["client delivery", "outsourced projects", "offshore development"]
     }
 }
 

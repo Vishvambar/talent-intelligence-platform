@@ -1,46 +1,73 @@
-# Phase 3 Implementation Plan: Feature Warehouse
+# Phase 3 Implementation Plan: Feature Warehouse (V12 Upgraded)
 
-**Status**: Planning
+**Status**: Frozen & Implemented
 **Target File**: `offline/phase03_feature_warehouse.py`
 **Input File**: `data/raw/candidates.jsonl`
-**Output File**: `data/artifacts/candidate_features.parquet`
 
 ## Objective
-Convert all 100,000 raw candidate JSON profiles into a structured, flat numeric feature matrix. This script transforms unstructured text, fragmented career histories, and missing behavioral signals into continuous numerical distributions ready for Phase 8/9 tree-based ranking algorithms.
+Convert all 100,000 raw candidate JSON profiles into structured tabular artifacts. This phase is the foundation for all downstream ranking, retrieval, and penalty models.
+
+## Output Artifacts
+
+Phase 3 will generate four separate, critical artifacts into `data/artifacts/`:
+
+### 1. `candidate_features.parquet`
+Only numeric features, strictly typed.
+```json
+{
+    "candidate_id": "...",
+    "years_exp": 8.3,
+    "retrieval_score": 0.73,
+    "job_hop_count": 2.0
+}
+```
+
+### 2. `candidate_texts.parquet`
+Raw text aggregates necessary for Phase 5 (Dense Retrieval), Phase 7 (Teacher), and Phase 10 (Reasoning Bank). Crucially, this also includes the full raw JSON string to eliminate ever having to re-parse the 500MB JSONL.
+```json
+{
+    "candidate_id": "...",
+    "headline": "...",
+    "summary": "...",
+    "skills_text": "...",
+    "career_text": "...",
+    "retrieval_text": "combined text",
+    "raw_candidate_json": "{...}"
+}
+```
+
+### 3. `feature_registry.json`
+A formal registry defining the schema for the features DataFrame, preventing batch drift.
+
+### 4. `feature_stats.json`
+A comprehensive statistical report generated after export containing the `mean`, `std`, `min`, and `max` for every single numeric feature. This allows instant debugging of distributions before Phase 8.
 
 ## Implementation Details
 
-### 1. Dependency Upgrades
-Phase 3 requires tabular dataframe manipulation and Parquet exporting. I will install `polars`, `pandas`, and `pyarrow` into the `venv` and update the `requirements.txt` accordingly.
-
-### 2. Streaming Data Ingestion
-To safely process the ~500MB JSONL file without blowing up the memory budget, we will stream the candidates in discrete chunks of 1,000:
-```python
-def stream_candidates(path: str, batch_size: int = 1000):
-    batch = []
-    with open(path, 'rt', encoding='utf-8') as f:
-        for line in f:
-            if line.strip():
-                batch.append(json.loads(line))
-                if len(batch) == batch_size:
-                    yield batch
-                    batch = []
+### 1. Checkpointing Pipeline
+To protect against OOMs or mid-stream parsing crashes (e.g. failing at candidate 87,000), candidates will be streamed, parsed, and **flushed to disk every 5,000 records**:
+```text
+data/artifacts/checkpoints/
+  features_part_001.parquet
+  texts_part_001.parquet
+  ...
 ```
+Once the stream finishes, all parts are merged into the final two single Parquet files.
 
-### 3. Feature Extraction Modules
-For each candidate, we will execute a deterministic feature extraction suite:
+### 2. Candidate Feature Extraction
 
-- **Experience Features**: Computes `years_exp`, `avg_tenure`, `promotion_count` (title progression within the same company), and `leadership_count`.
-- **Technical Features**: We dynamically import `compute_ontology_feature_vector` from `phase02_ontology_engine.py` and pass it the combined `headline + summary + skills_text`. The output dictionary (e.g., `vector_db_score`, `retrieval_score`) is flattened directly into the candidate's row.
-- **Career Features**: We will classify each company in their history using `PRODUCT_SIGNALS` vs `CONSULTING_SIGNALS` to generate a `product_company_score` and a `consulting_score`. We will also generate a `startup_score`.
-- **Education Features**: We map university tiers to numerical scores (`tier_1` = 1.0, `tier_4` = 0.2).
-- **Behavioral Signals**: We impute missing `github_activity_score == -1` to exactly `40.0`, and set `github_missing = 1.0` so the tree can split on the imputation.
+- **Candidate ID Preservation**: Explicitly enforced. Every row joins on `candidate_id`.
+- **Integrity Features (For Phase 4)**: Computes `job_hop_count`, `duplicate_company_count`, `career_gap_months`, and `title_inflation_score`. No penalties applied here, just computation.
+- **Career Features Expansion**: Beyond just product/consulting, this explicitly ensures `founding_team_score`, `ownership_score`, `marketplace_score`, and `search_relevance_score` are captured and exposed for Elite ReRank.
+- **Education Tie-Down**: `education_tier_score` bounds lowered to `[0.0 - 0.3]` to heavily de-emphasize pedigree compared to "shipping" and "ownership" signals.
+- **Behavioral Signals**: `github_activity_score == -1` imputed to `40.0`, setting `github_missing = 1.0` flag for tree splits.
+- **Technical Features**: Passes `headline + summary + skills` into Phase 2's `compute_ontology_feature_vector()` and automatically maps output scores.
 
-### 4. Tabular Export & Verification
-The final list of 100,000 flat dictionaries is converted to a Polars/Pandas DataFrame and written to `candidate_features.parquet`.
+### 3. V12 Verification Checklist
 
-Before exiting, the script will execute the V12 Verification Checklist:
-- **Shape Audit**: Assert exactly 100,000 rows.
-- **Null Audit**: Assert exactly 0 nulls across all numeric columns.
-- **Imputation Audit**: Verify `github_missing` distribution matches the missing `-1` count in the raw data.
-- **Distribution Audit**: Print `years_exp.describe()` to sanity-check ranges (0–30+).
+Before script completion, the merged artifacts are audited:
+- **Shape Audit**: Dynamically counts the JSONL rows first (`raw_count = count_jsonl_rows()`), then asserts `len(df) == raw_count`.
+- **Null Audit**: `assert df.null_count() == 0`
+- **Cardinality Audit**: `assert len(df.columns) == EXPECTED_FEATURE_COUNT`
+- **ID Uniqueness**: `assert df['candidate_id'].n_unique() == raw_count`
+- **Ontology Coverage Audit**: Assert that key features (`retrieval_score.mean()`, `ownership_score.mean()`) are neither strictly `0.0` nor `1.0`.

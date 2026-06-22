@@ -175,13 +175,19 @@
         "written communication",
         "async-first",
         "technical writing",
-        "documentation culture"
+        "documentation culture",
+        "rfc",
+        "architecture decision record",
+        "adr"
       ],
       "regexes": [
         "\\bwritten\\ communication\\b",
         "\\basync\\-first\\b",
         "\\btechnical\\ writing\\b",
-        "\\bdocumentation\\ culture\\b"
+        "\\bdocumentation\\ culture\\b",
+        "\\brfc\\b",
+        "\\barchitecture\\ decision\\ record\\b",
+        "\\badr\\b"
       ]
     },
     "PRODUCTION_ML_DEPLOYMENT": {
@@ -287,11 +293,23 @@
       "children": [],
       "terms": [
         "open-source contributions",
-        "OSS contributions"
+        "OSS contributions",
+        "open source",
+        "open-source",
+        "github contributor",
+        "maintainer",
+        "pull request",
+        "contributor"
       ],
       "regexes": [
         "\\bopen\\-source\\ contributions\\b",
-        "\\boss\\ contributions\\b"
+        "\\boss\\ contributions\\b",
+        "\\bopen\\ source\\b",
+        "\\bopen\\-source\\b",
+        "\\bgithub\\ contributor\\b",
+        "\\bmaintainer\\b",
+        "\\bpull\\ request\\b",
+        "\\bcontributor\\b"
       ]
     },
     "RETRIEVAL": {
@@ -327,13 +345,21 @@
         "search relevance",
         "search ranking",
         "ranking model",
-        "relevance ranking"
+        "relevance ranking",
+        "ranking algorithms",
+        "search quality",
+        "ranking",
+        "relevance"
       ],
       "regexes": [
         "\\bsearch\\ relevance\\b",
         "\\bsearch\\ ranking\\b",
         "\\branking\\ model\\b",
-        "\\brelevance\\ ranking\\b"
+        "\\brelevance\\ ranking\\b",
+        "\\branking\\ algorithms\\b",
+        "\\bsearch\\ quality\\b",
+        "\\branking\\b",
+        "\\brelevance\\b"
       ]
     },
     "EXPERIMENTATION": {
@@ -379,7 +405,12 @@
         "early engineer",
         "0 to 1",
         "zero to one",
-        "founding member"
+        "founding member",
+        "founder",
+        "co-founder",
+        "cofounder",
+        "0-1",
+        "0-to-1"
       ],
       "regexes": [
         "\\bfounding\\ engineer\\b",
@@ -387,7 +418,12 @@
         "\\bearly\\ engineer\\b",
         "\\b0\\ to\\ 1\\b",
         "\\bzero\\ to\\ one\\b",
-        "\\bfounding\\ member\\b"
+        "\\bfounding\\ member\\b",
+        "\\bfounder\\b",
+        "\\bco\\-founder\\b",
+        "\\bcofounder\\b",
+        "\\b0\\-1\\b",
+        "\\b0\\-to\\-1\\b"
       ]
     },
     "OWNERSHIP": {
@@ -489,7 +525,10 @@
         "langchain wrappers",
         "langchain wrapper",
         "langchain only",
-        "api wrappers"
+        "api wrappers",
+        "api wrapper",
+        "openai wrapper",
+        "gpt wrapper"
       ],
       "regexes": [
         "\\btoy\\ ai\\ projects\\b",
@@ -503,7 +542,10 @@
         "\\blangchain\\ wrappers\\b",
         "\\blangchain\\ wrapper\\b",
         "\\blangchain\\ only\\b",
-        "\\bapi\\ wrappers\\b"
+        "\\bapi\\ wrappers\\b",
+        "\\bapi\\ wrapper\\b",
+        "\\bopenai\\ wrapper\\b",
+        "\\bgpt\\ wrapper\\b"
       ]
     },
     "CONSULTING_ONLY_BACKGROUND": {
@@ -518,7 +560,10 @@
         "outsourcing company background",
         "IT services background",
         "system integrators",
-        "consulting firm experience"
+        "consulting firm experience",
+        "client delivery",
+        "outsourced projects",
+        "offshore development"
       ],
       "regexes": [
         "\\bit\\ consulting\\b",
@@ -529,7 +574,10 @@
         "\\boutsourcing\\ company\\ background\\b",
         "\\bit\\ services\\ background\\b",
         "\\bsystem\\ integrators\\b",
-        "\\bconsulting\\ firm\\ experience\\b"
+        "\\bconsulting\\ firm\\ experience\\b",
+        "\\bclient\\ delivery\\b",
+        "\\boutsourced\\ projects\\b",
+        "\\boffshore\\ development\\b"
       ]
     },
     "NON_CODING_ENGINEERS": {
@@ -600,7 +648,7 @@
   "metadata": {
     "version": "v12",
     "generated_from_jd_hash": "f3a4477a298c6286126aa5eeaa0721f777c10066b01d9a3f15333b56a0562897",
-    "generated_from_jd_timestamp": "2026-06-22T16:35:20.082239Z",
+    "generated_from_jd_timestamp": "2026-06-22T20:11:55.171038Z",
     "ontology_nodes": 27,
     "positive_nodes": 20,
     "negative_nodes": 7
