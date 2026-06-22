@@ -1,5 +1,9 @@
 # Phase 9: Ranking Ensemble (LGBM + XGBoost + Cross-Encoder)
 
+## What This Phase Actually Does
+Phase 9 trains and executes ultra-fast tree-based algorithms (LightGBM/XGBoost) over the `candidate_features.parquet` matrix. It learns to predict the expensive Phase 7 Teacher labels using only the cheap, structured Phase 3 features. This allows us to instantly rank and surface the absolute best candidates without paying LLM inference costs for everyone.
+
+
 ## The "Why" behind the architecture
 
 ### Why not LambdaRank?

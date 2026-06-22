@@ -1,5 +1,9 @@
 # Phase 3: Candidate Knowledge Graph & Feature Warehouse
 
+## What This Phase Actually Does
+Phase 3 streams the raw `candidates.jsonl` (100,000+ candidates) and transforms unstructured text, scattered career histories, and missing behavioral signals into a flat, highly structured tabular numeric matrix (`candidate_features.parquet`). It relies on Phase 2 to map technical skills to normalized numeric scores (0.0 to 1.0).
+
+
 ## The "Why" behind the architecture
 
 ### Why extract features before retrieval?

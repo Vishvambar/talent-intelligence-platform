@@ -1,5 +1,9 @@
 # Phase 2: Domain Ontology Engine
 
+## What This Phase Actually Does
+Phase 2 ingests the `jd_requirements.json` from Phase 1 and merges it with a frozen, human-curated Expert Ontology. It produces a strict hierarchical knowledge graph (`ontology.json`) that maps concepts (e.g., "Pinecone" -> "VECTOR_DB" -> "RETRIEVAL") and generates regex-based coverage formulas. It exports a function to convert unstructured text into a flat numeric feature vector.
+
+
 ## The "Why" behind the architecture
 
 ### Why NO LLMs at Runtime?

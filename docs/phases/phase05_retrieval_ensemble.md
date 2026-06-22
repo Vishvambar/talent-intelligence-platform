@@ -1,5 +1,9 @@
 # Phase 5: Multi-Embedding Hybrid Retrieval Ensemble
 
+## What This Phase Actually Does
+Phase 5 filters the 100,000 candidates down to a highly relevant Top 500. It queries a multi-index vector database (Pinecone, Qdrant) using the semantic targets identified in Phase 1 and Phase 2. It prioritizes recall, ensuring that we cast a wide net to capture all potentially viable candidates for the expensive ranking models.
+
+
 ## The "Why" behind the architecture
 
 ### Why use BOTH BGE-Large and E5-Large?

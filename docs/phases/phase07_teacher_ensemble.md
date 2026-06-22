@@ -1,5 +1,9 @@
 # Phase 7: Teacher Ensemble & Synthetic Labels
 
+## What This Phase Actually Does
+Phase 7 generates ground-truth training labels for our ML models. Instead of relying on flawed historical human hiring data, we use a slow, expensive ensemble of high-end LLMs (GPT-4, Claude) acting as senior technical recruiters to strictly evaluate the Top 500 candidates. This produces unbiased, high-fidelity relevance scores (e.g., 0 to 100) to train the Phase 9 models.
+
+
 ## The "Why" behind the architecture
 
 ### Why Temperature = 0?

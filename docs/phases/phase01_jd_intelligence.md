@@ -1,5 +1,9 @@
 # Phase 1: JD Intelligence Engine
 
+## What This Phase Actually Does
+Phase 1 reads the raw Job Description (JD) text and uses LLMs to extract a structured, deterministic JSON contract. It extracts hard requirements, preferred skills, and negative signals (red flags), canonicalizes them into standard terms, and saves them to `jd_requirements.json`. This provides a stable target for all downstream retrieval and ranking.
+
+
 ## The "Why" behind the Architecture
 
 The Job Description (JD) Intelligence Engine is the foundation of the entire pipeline. If Phase 1 outputs noisy, duplicate, or hallucinated requirements, every downstream retrieval and ranking model will learn the wrong boundaries. The goal of Phase 1 is to convert the human-readable `job_description.docx` into a deterministic, queryable JSON object: `jd_requirements.json`.
