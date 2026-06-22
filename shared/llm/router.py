@@ -55,10 +55,13 @@ class LLMRouter:
         with open(cache_path, "w") as f:
             f.write(response)
 
-    def generate(self, prompt: str, phase: str, schema: Type[T]) -> T:
+    def generate(self, prompt: str, phase: str, schema: Type[T]) -> tuple[T, Dict[str, Any]]:
         """
         Generates a JSON response from the optimal provider, enforcing Pydantic schema validation.
+        Returns the parsed schema and a diagnostic metadata dictionary.
         """
+        import time
+        start_time = time.time()
         # 1. Check cache
         cached = self._read_cache(prompt, phase)
         if cached:
@@ -66,7 +69,13 @@ class LLMRouter:
                 # If cached version perfectly matches current Pydantic schema bounds
                 parsed = schema.model_validate_json(cached)
                 logger.info(f"[{phase}] Cache hit. Skipping LLM call.")
-                return parsed
+                return parsed, {
+                    "provider": "cache",
+                    "model": "cache",
+                    "cache_hit": True,
+                    "schema_retries": 0,
+                    "generation_time_seconds": round(time.time() - start_time, 2)
+                }
             except ValidationError:
                 logger.warning(f"[{phase}] Cache exists but invalid for current schema. Ignoring cache.")
                 
@@ -101,7 +110,13 @@ class LLMRouter:
                     
                     # Success
                     self._write_cache(prompt, phase, raw_json)
-                    return parsed
+                    return parsed, {
+                        "provider": provider_name,
+                        "model": "unknown",
+                        "cache_hit": False,
+                        "schema_retries": attempt,
+                        "generation_time_seconds": round(time.time() - start_time, 2)
+                    }
                     
                 except ValidationError as e:
                     last_exception = e

@@ -70,7 +70,19 @@ The router implements a localized SHA-256 caching layer:
 
 ---
 
-## 5. Summary of LLM Usage Across Phases
+## 5. Extraction Diagnostics
+
+To ensure absolute visibility into the pipeline's health without parsing raw stdout logs, the `LLMRouter`'s `generate()` method returns a tuple: `(parsed_schema, diagnostic_metadata)`.
+
+This metadata is automatically captured and aggregated by the calling phase. It tracks:
+- **`generation_time_seconds`**: Pinpoints if a provider is hanging or experiencing latency spikes.
+- **`schema_retries`**: Highlights if a specific model has begun hallucinating JSON structures and failing the Pydantic check.
+- **`cache_hit`**: Confirms if the `cache_version` hash is successfully bypassing the API.
+- **`provider`**: Identifies exactly which provider ultimately succeeded, making fallback routing executions completely transparent in the final JSON.
+
+---
+
+## 6. Summary of LLM Usage Across Phases
 
 | Phase | Responsibility | Router Priority | Reason for Priority |
 |---|---|---|---|

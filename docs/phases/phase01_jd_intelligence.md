@@ -99,11 +99,16 @@ Running Phase 1 is fully automated:
 python offline/phase01_jd_intelligence.py
 ```
 
-Before saving to disk, the script injects a `metadata` payload into the JSON. This includes:
-* The exact phase ID (`phase01`).
-* The exact model utilized (`gemini-1.5-flash`).
-* The provider (`gemini`).
-* The UTC timestamp of generation.
-* The number of successful lenses merged.
+Before saving to disk, the script injects a highly detailed `metadata` payload into the JSON containing **Extraction Diagnostics**. This is crucial for debugging sudden latency spikes or model degradation later in the pipeline.
+
+The metadata includes:
+* **`phase`**: The exact phase ID (`phase01`).
+* **`timestamp`**: The UTC timestamp of generation.
+* **`successful_lenses`**: The number of successful lenses merged.
+* **`failed_lenses`**: The number of lenses that failed to generate.
+* **`cache_hit_rate`**: The percentage of lenses that bypassed the LLM due to `cache_version: v1` hashing.
+* **`generation_time_seconds`**: The total time taken to generate the schema.
+* **`schema_retries`**: The total number of Pydantic validation failures that forced an automatic retry.
+* **`providers_used`**: An array of the exact providers utilized (e.g., `["gemini", "cerebras"]`) to explicitly trace failover executions.
 
 The final output is serialized to `data/artifacts/jd_requirements.json`, fully unblocking the execution of the Domain Ontology Engine (Phase 2).

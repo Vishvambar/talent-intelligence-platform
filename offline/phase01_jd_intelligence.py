@@ -159,24 +159,42 @@ def run():
     
     router = LLMRouter()
     schemas = []
+    metadata_list = []
     
     print("Running Technical Lens...")
-    schemas.append(router.generate(PROMPT_TECHNICAL.format(jd=jd_text), "phase01", JDSchema))
+    schema, meta = router.generate(PROMPT_TECHNICAL.format(jd=jd_text), "phase01", JDSchema)
+    schemas.append(schema)
+    metadata_list.append(meta)
     
     print("Running Execution Lens...")
-    schemas.append(router.generate(PROMPT_EXECUTION.format(jd=jd_text), "phase01", JDSchema))
+    schema, meta = router.generate(PROMPT_EXECUTION.format(jd=jd_text), "phase01", JDSchema)
+    schemas.append(schema)
+    metadata_list.append(meta)
     
     print("Running Culture Lens...")
-    schemas.append(router.generate(PROMPT_CULTURE.format(jd=jd_text), "phase01", JDSchema))
+    schema, meta = router.generate(PROMPT_CULTURE.format(jd=jd_text), "phase01", JDSchema)
+    schemas.append(schema)
+    metadata_list.append(meta)
     
     print("Merging Lenses using Median Aggregation...")
     final_output = merge_schemas(schemas)
+    
+    # Aggregate Diagnostics
+    total_time = sum(m.get("generation_time_seconds", 0) for m in metadata_list)
+    total_retries = sum(m.get("schema_retries", 0) for m in metadata_list)
+    cache_hits = sum(1 for m in metadata_list if m.get("cache_hit", False))
+    providers_used = list(set(m.get("provider", "unknown") for m in metadata_list))
     
     # Append Metadata
     final_output["metadata"] = {
         "phase": "phase01",
         "timestamp": datetime.utcnow().isoformat() + "Z",
-        "successful_lenses": len(schemas)
+        "successful_lenses": len(schemas),
+        "failed_lenses": 3 - len(schemas),
+        "cache_hit_rate": round(cache_hits / 3, 2),
+        "generation_time_seconds": round(total_time, 2),
+        "schema_retries": total_retries,
+        "providers_used": providers_used
     }
     
     output_path = os.path.join(project_root, "data", "artifacts", "jd_requirements.json")
