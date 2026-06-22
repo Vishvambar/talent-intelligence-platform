@@ -29,6 +29,12 @@ data/raw/
 data/artifacts/*.parquet
 data/artifacts/*.index
 data/artifacts/*.pkl
+# Secrets & Environment Variables
+.env
+.env.*
+*.env
+!.env.example
+
 # OS & Editor
 .DS_Store
 .vscode/
