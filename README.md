@@ -13,3 +13,9 @@ This system uses a highly robust, routed multi-provider LLM infrastructure to pr
    cp .env.example .env
    ```
 2. Populate the `.env` file with your available API keys for the configured providers (Gemini, Groq, Cerebras, GitHub Models, OpenRouter).
+
+## Documentation
+
+Detailed technical specifications and architectural decisions are documented within the codebase:
+- **[Phase 1: JD Intelligence Engine](docs/phases/phase01_jd_intelligence.md)**: Deep dive into the multi-lens prompt extraction, Pydantic schemas, and mathematical median aggregation.
+- **[LLM Routing Infrastructure](docs/architecture/llm_routing_infrastructure.md)**: Deep dive into the phase-aware routing, Pydantic validation retry loops, and SHA-256 caching mechanisms.
