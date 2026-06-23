@@ -1255,349 +1255,58 @@ Schema: candidate_id, quality_score, fraud_probability,
 
 ---
 
-## PHASE 5 & 6 — MULTI-EMBEDDING HYBRID RETRIEVAL ENSEMBLE [V12]
-### V12 UPGRADE: Multi-Embedding Generation (BGE + E5)
-V12 drastically improves recall by generating embeddings using both `bge-large-en-v1.5` and `e5-large-v2` for both the profile and career text, creating a 4-vector ensemble.
-
-
-## PHASE 5 (Legacy) — RETRIEVAL INFRASTRUCTURE
+## PHASE 5 — VECTOR GENERATION (KAGGLE RTX)
 
 ### Goal
-Precompute all indexes needed for fast candidate retrieval. This is the most compute-intensive phase. Run it on GPU if available offline.
+Precompute the dense embedding spaces for all 100,000 candidates across multiple scopes and models.
 
-### Prerequisites
-- Phases 1–4 complete
-- `sentence-transformers` and `faiss-cpu` installed
-- 8+ GB RAM available
+### Architecture Update (Post-Diagnostic V12)
+We strictly avoid collapsing the candidate profile into a single "blob". We maintain 6 independent dense indexes to prevent semantic dilution:
+- **Models**: `BAAI/bge-large-en-v1.5` and `intfloat/e5-large-v2`
+- **Scopes**: Profile Text, Career History Text, Skills Text
+- **Vectors per Candidate**: 6
+- **Storage**: `np.float16` arrays inside Parquet to strictly bound VRAM and RAM footprint.
 
-### Implementation Steps
-
-**Step 5.1 — Build the dense embedding index**
+### Implementation Output
 ```python
-from sentence_transformers import SentenceTransformer
-import faiss
-import numpy as np
-
-# Load model
-model = SentenceTransformer("BAAI/bge-large-en-v1.5")
-# Alternative if memory is tight: "BAAI/bge-base-en-v1.5" (768 dims, faster)
-
-def build_candidate_text(cand: dict) -> str:
-    """The text we embed for each candidate."""
-    profile = cand.get("profile", {})
-    career = cand.get("career_history", [])
-    skills = cand.get("skills", [])
-
-    career_text = " | ".join([
-        f"{r.get('title','')} at {r.get('company','')}: {r.get('description','')}"
-        for r in career[:5]  # most recent 5 roles
-    ])
-
-    return " ".join([
-        profile.get("headline", ""),
-        profile.get("summary", ""),
-        " ".join(s.get("name", "") for s in skills[:30]),
-        career_text
-    ])[:2000]  # truncate to avoid token limit issues
-
-# Process in batches
-BATCH_SIZE = 128
-DIM = 1024  # bge-large output dimension
-
-all_embeddings = []
-all_ids = []
-
-print("Generating embeddings...")
-batch_texts = []
-batch_ids = []
-
-with gzip.open("data/raw/candidates.jsonl.gz", 'rt') as f:
-    for line in tqdm(f):
-        cand = json.loads(line)
-        batch_texts.append(build_candidate_text(cand))
-        batch_ids.append(cand["candidate_id"])
-
-        if len(batch_texts) == BATCH_SIZE:
-            embeddings = model.encode(
-                batch_texts,
-                normalize_embeddings=True,  # for cosine similarity
-                show_progress_bar=False
-            )
-            all_embeddings.append(embeddings)
-            all_ids.extend(batch_ids)
-            batch_texts = []
-            batch_ids = []
-
-# Final batch
-if batch_texts:
-    embeddings = model.encode(batch_texts, normalize_embeddings=True)
-    all_embeddings.append(embeddings)
-    all_ids.extend(batch_ids)
-
-all_embeddings = np.vstack(all_embeddings).astype('float32')
-print(f"Embeddings shape: {all_embeddings.shape}")  # (100000, 1024)
-
-# Build FAISS IVF-PQ index
-nlist = 512   # number of Voronoi cells
-m = 64        # PQ segments (must divide DIM=1024 → 1024/64=16 ✓)
-nbits = 8     # bits per code
-
-quantizer = faiss.IndexFlatIP(DIM)  # inner product (cosine since normalized)
-index = faiss.IndexIVFPQ(quantizer, DIM, nlist, m, nbits)
-
-# Train on a sample
-print("Training FAISS index...")
-sample_size = min(50000, len(all_embeddings))
-index.train(all_embeddings[:sample_size])
-
-# Add all embeddings
-print("Adding vectors to index...")
-index.add(all_embeddings)
-index.nprobe = 50  # search 50 cells at query time
-
-faiss.write_index(index, "data/artifacts/faiss.index")
-print(f"FAISS index size: {index.ntotal} vectors")
-
-# Save ID mapping (FAISS uses integer IDs, we need string candidate_ids)
-id_mapping = {i: cid for i, cid in enumerate(all_ids)}
-import pickle
-with open("data/artifacts/faiss_id_mapping.pkl", "wb") as f:
-    pickle.dump(id_mapping, f)
+data/artifacts/candidate_embeddings_bge.parquet (100k rows)
+data/artifacts/candidate_embeddings_e5.parquet (100k rows)
+data/artifacts/jd_embeddings.npz
 ```
-
-**Step 5.2 — Also embed the JD query vector**
-```python
-# Embed the JD for use in Phase 6
-jd_text = f"""
-Senior AI Engineer Founding Team
-Required: embeddings, vector databases, retrieval systems, ranking evaluation,
-NDCG, MAP, semantic search, RAG, product company, startup
-Experience: 5-9 years applied ML, production retrieval systems,
-founding team mindset, fast execution, ownership
-"""
-jd_embedding = model.encode([jd_text], normalize_embeddings=True).astype('float32')
-np.save("data/artifacts/jd_embedding.npy", jd_embedding)
-```
-
-**Step 5.3 — Build BM25 index**
-```python
-from rank_bm25 import BM25Okapi
-import re
-
-def tokenize_for_bm25(text: str) -> list:
-    text = text.lower()
-    text = re.sub(r'[^\w\s]', ' ', text)
-    tokens = text.split()
-    # Add bigrams for multi-word technical terms
-    bigrams = [f"{tokens[i]}_{tokens[i+1]}"
-               for i in range(len(tokens)-1)
-               if len(tokens[i]) > 2 and len(tokens[i+1]) > 2]
-    return tokens + bigrams
-
-bm25_corpus = []
-bm25_ids = []
-
-with gzip.open("data/raw/candidates.jsonl.gz", 'rt') as f:
-    for line in tqdm(f):
-        cand = json.loads(line)
-        text = build_candidate_text(cand)
-        bm25_corpus.append(tokenize_for_bm25(text))
-        bm25_ids.append(cand["candidate_id"])
-
-print("Building BM25 index...")
-bm25_index = BM25Okapi(bm25_corpus)
-
-with open("data/artifacts/bm25.pkl", "wb") as f:
-    pickle.dump({"index": bm25_index, "ids": bm25_ids}, f)
-
-print("BM25 index built.")
-```
-
-### Verification Checklist
-- [ ] `faiss.index` exists and `index.ntotal == 100000`
-- [ ] `faiss_id_mapping.pkl` maps 0..99999 → candidate_id strings
-- [ ] `jd_embedding.npy` shape is `(1, 1024)`
-- [ ] `bm25.pkl` loads correctly and `len(bm25_ids) == 100000`
-- [ ] Test retrieval: query with "NDCG MAP ranking evaluation vector database" → verify top 5 results look relevant
-- [ ] Memory check: FAISS index should be < 2 GB on disk with IVF-PQ compression
-
-### Common Mistakes
-- Not normalizing embeddings before building the index: with `normalize_embeddings=True`, inner product becomes cosine similarity. Without it, inner product is meaningless.
-- Setting `nprobe` too low: 10 gives fast but poor recall. 50 is a good balance. 100 if you have time budget.
-- Forgetting to save the ID mapping: FAISS returns integer indices, not candidate_id strings.
-
-### Output
-```
-data/artifacts/faiss.index
-data/artifacts/faiss_id_mapping.pkl
-data/artifacts/jd_embedding.npy
-data/artifacts/bm25.pkl
-```
+*Note: We bypassed `faiss` entirely in favor of direct Numpy C-compiled matrix math for perfect exact-match fidelity at the 100k scale.*
 
 ---
 
-## PHASE 5 & 6 — MULTI-EMBEDDING HYBRID RETRIEVAL ENSEMBLE [V12]
-### V12 UPGRADE: Multi-Embedding Generation (BGE + E5)
-V12 drastically improves recall by generating embeddings using both `bge-large-en-v1.5` and `e5-large-v2` for both the profile and career text, creating a 4-vector ensemble.
-
-
-## PHASE 5 (Legacy).5 — BROAD ELIGIBILITY FILTER
+## PHASE 6 — HYBRID RETRIEVAL ENSEMBLE
 
 ### Goal
-Safely reduce the 100,000 candidate pool down to ~20,000 before dense retrieval. This is not a ranking stage, but a soft filter to eliminate obvious non-relevant categories (e.g., HR, Marketing, Sales) to improve speed, lower memory pressure, and increase precision in the dense retrieval step.
+Reduce the full 100,000 candidate pool to the Top 3,000 using independent Sparse and Dense semantic nets.
 
-### Implementation Steps
-1. Filter out candidates whose current or past titles strictly align with non-technical roles.
-2. Keep candidates mentioning: ML, Data Science, AI, Search, Recommendation, Backend, Software Engineer.
-3. Pass the remaining ~20,000 candidates to Phase 6.
+### Architecture Update (Post-Diagnostic V12)
+We DO NOT use any Eligibility Filters (Phase 5.5 is removed). The hardware is sufficient to search the full 100k pool directly, guaranteeing we don't accidentally drop highly qualified candidates with poorly formatted resumes.
 
----
-
-## PHASE 6 — HYBRID RETRIEVAL
-
-### Goal
-Reduce the ~20,000 broadly eligible candidates to the Top 3,000 while maintaining extremely high recall. This pool must contain essentially all truly relevant candidates — any relevant candidate missed here is permanently lost.
-
-### Prerequisites
-- Phases 1–5 complete
-
-### Implementation Steps
-
-**Step 6.1 — Dense retrieval (FAISS)**
+**Step 6.1 — Independent Dense RRF**
+We query all 6 dense indices independently against the full 100k pool and extract the Top 5000 candidates per index using fast `np.argpartition`.
+We fuse them using weighted Reciprocal Rank Fusion (RRF), heavily leaning into the Career scope which demonstrated the highest retrieval diversity in diagnostics:
 ```python
-import faiss
-import numpy as np
-import pickle
-
-index = faiss.read_index("data/artifacts/faiss.index")
-index.nprobe = 50
-
-jd_embedding = np.load("data/artifacts/jd_embedding.npy")
-
-# Retrieve top 5000 from dense (we'll combine with others)
-TOP_DENSE = 5000
-scores, indices = index.search(jd_embedding, TOP_DENSE)
-
-with open("data/artifacts/faiss_id_mapping.pkl", "rb") as f:
-    id_mapping = pickle.load(f)
-
-dense_results = {
-    id_mapping[int(idx)]: float(score)
-    for score, idx in zip(scores[0], indices[0])
-    if idx >= 0
+DENSE_WEIGHTS = {
+    "e5_career": 1.0, "e5_profile": 0.5, "e5_skills": 0.4,
+    "bge_career": 0.9, "bge_profile": 0.4, "bge_skills": 0.3
 }
-# dense_results: {candidate_id -> cosine_similarity}
 ```
+This produces the **Top 10,000 Dense Candidates**.
 
-**Step 6.2 — BM25 retrieval**
-```python
-with open("data/artifacts/bm25.pkl", "rb") as f:
-    bm25_data = pickle.load(f)
+**Step 6.2 — Independent Sparse Search (BM25)**
+We run a fully customized, offline-compatible `VectorizedBM25` built via Sklearn's `CountVectorizer` across the entire 100k candidate pool.
+This produces the **Top 10,000 BM25 Candidates**.
 
-bm25_index = bm25_data["index"]
-bm25_ids = bm25_data["ids"]
+**Step 6.3 — Global Fusion**
+We merge the Top 10k Dense and Top 10k BM25 via RRF, yielding the final 10,000 candidates. The top 3,000 are extracted for Phase 7 scoring.
+Each candidate is tagged with their `retrieval_source` (`dense_only`, `bm25_only`, `dense+bm25`).
 
-# Query: key JD terms
-jd_query = tokenize_for_bm25(
-    "retrieval semantic search rag embeddings vector database pinecone qdrant "
-    "milvus ndcg map ranking evaluation product startup founding engineer"
-)
-
-bm25_scores = bm25_index.get_scores(jd_query)
-# Get top 5000 BM25
-top_bm25_idx = np.argsort(bm25_scores)[::-1][:5000]
-bm25_results = {
-    bm25_ids[i]: float(bm25_scores[i])
-    for i in top_bm25_idx
-}
-
-# Normalize BM25 scores to [0, 1]
-max_bm25 = max(bm25_results.values()) if bm25_results else 1.0
-bm25_results_norm = {k: v / max_bm25 for k, v in bm25_results.items()}
-```
-
-**Step 6.3 — Combine all retrieval signals**
-```python
-import polars as pl
-
-# Load precomputed feature scores
-cf = pl.read_parquet("data/artifacts/career_features.parquet")
-qf = pl.read_parquet("data/artifacts/quality_features.parquet")
-
-# Get all unique candidates from dense + BM25
-all_candidate_ids = list(set(dense_results.keys()) | set(bm25_results_norm.keys()))
-print(f"Candidates in union pool: {len(all_candidate_ids)}")
-
-# Build per-candidate retrieval scores
-retrieval_rows = []
-for cid in all_candidate_ids:
-    dense = dense_results.get(cid, 0.0)
-    bm25 = bm25_results_norm.get(cid, 0.0)
-
-    # Get ontology and career scores from precomputed features
-    career_row = cf.filter(pl.col("candidate_id") == cid)
-    career_ontology = career_row["career_ontology_score"][0] if len(career_row) > 0 else 0.0
-    career_bm25 = career_row["career_bm25_score"][0] if len(career_row) > 0 else 0.0
-
-    # Combined career intelligence score
-    career_intel = (career_ontology + career_bm25) / 2
-
-    # Retrieval score with config weights
-    retrieval_score = (
-        0.35 * dense
-        + 0.25 * bm25
-        + 0.25 * career_ontology
-        + 0.15 * career_bm25
-    )
-
-    retrieval_rows.append({
-        "candidate_id": cid,
-        "dense_score": dense,
-        "bm25_score": bm25,
-        "career_intel_score": career_intel,
-        "retrieval_score": retrieval_score,
-    })
-
-df_retrieval = pl.DataFrame(retrieval_rows)
-
-# Apply quality penalty: down-rank extreme honeypots
-df_retrieval = df_retrieval.join(
-    qf.select(["candidate_id", "fraud_probability"]),
-    on="candidate_id", how="left"
-).with_columns(
-    pl.col("fraud_probability").fill_null(0.0)
-).with_columns(
-    (pl.col("retrieval_score") * (1 - pl.col("fraud_probability") * 0.3))
-    .alias("retrieval_score_adjusted")
-)
-
-# Take Top 3000
-top_3000 = (df_retrieval
-    .sort("retrieval_score_adjusted", descending=True)
-    .head(3000))
-
-top_3000.write_parquet("data/artifacts/top_3000.parquet")
-print(f"Top 3000 saved. Score range: {top_3000['retrieval_score_adjusted'].min():.3f} - {top_3000['retrieval_score_adjusted'].max():.3f}")
-```
-
-### Verification Checklist
-- [ ] Exactly 3,000 candidates in `top_3000.parquet`
-- [ ] **Recall check**: manually identify 10 candidates who clearly match the JD — all 10 must appear in the top 3,000
-- [ ] Top 100 by retrieval score: manually verify at least 80% look genuinely relevant
-- [ ] `fraud_probability > 0.9` candidates should be rare in the top 3,000
-- [ ] Dense and BM25 overlap: check `len(set(dense_top5k) & set(bm25_top5k))` — should be ~2,000 (significant overlap means both are retrieving similar relevant candidates)
-- [ ] Score distribution is not flat — there should be clear separation between top 100 and 1000–3000
-
-### Common Mistakes
-- Taking top 3,000 from dense alone: use the union of dense + BM25 first, then score and select.
-- Forgetting that FAISS returns cosine similarities as inner products (range roughly 0.0–1.0 for normalized vectors, sometimes negative): clamp to [0, 1].
-- Not applying any fraud penalty at retrieval stage: a honeypot ranked #1 by dense similarity is a problem.
-
-### Output
-```
-data/artifacts/top_3000.parquet
-Schema: candidate_id, dense_score, bm25_score,
-        career_intel_score, retrieval_score, retrieval_score_adjusted
+### Verification
+- Dense/BM25 overlap should be ~40-50% (proving high retrieval diversity).
+- Final 3000 candidate pool is saved to `retrieval_top_3000.parquet`.
 ```
 
 ---

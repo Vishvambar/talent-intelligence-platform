@@ -1,0 +1,10 @@
+{
+  "generated_at": "2026-06-23T08:49:53.886247",
+  "dense_unique_candidates": 7139,
+  "bm25_unique_candidates": 7136,
+  "intersection_count": 4275,
+  "intersection_pct": 42.75,
+  "rrf_pool_size": 10000,
+  "final_top3000_size": 3000,
+  "final_top10000_size": 10000
+}
