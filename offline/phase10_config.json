@@ -1,0 +1,27 @@
+{
+  "gap_threshold": 0.20,
+  "jd_weights": {
+    "retrieval_score": 0.30,
+    "vector_db_score": 0.25,
+    "evaluation_score": 0.25,
+    "ml_score": 0.10,
+    "embedding_score": 0.10
+  },
+  "risk_thresholds": {
+    "integrity_score_min": 0.60,
+    "anomaly_severity_max": 0.40,
+    "consulting_score_max": 0.80,
+    "years_exp_min": 3.0
+  },
+  "seniority_thresholds": {
+    "junior_max": 2.0,
+    "mid_max": 5.0,
+    "senior_max": 8.0
+  },
+  "company_weights": {
+    "startup_threshold": 0.5,
+    "consulting_threshold": 0.5
+  },
+  "template_version": "v1.2",
+  "ontology_version": "v2.0"
+}

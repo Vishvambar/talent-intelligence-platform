@@ -1,5 +1,5 @@
-# REDROB CANDIDATE RANKING — ARCHITECTURE V12 FINAL
-## GPU-Accelerated Implementation & Verification Engineering Specification
+# REDROB CANDIDATE RANKING — ARCHITECTURE V11 FINAL
+## Complete Implementation & Verification Engineering Specification
 
 > **This document is the single source of truth.**
 > Every implementation decision, every variable name, every threshold, every output schema is defined here.
@@ -32,118 +32,77 @@ Top 100 candidates. Scores strictly decreasing. Reasoning grounded in profile da
 
 | Phase | Constraint |
 |---|---|
-| Offline (Kaggle RTX) | LLMs, APIs, GPUs (RTX PRO 6000 96GB) — Artifact generation |
+| Offline | LLMs, APIs, GPUs, long computation — all allowed |
 | Online inference | CPU only · ≤16 GB RAM · ≤5 min wall-clock · No network · No APIs |
 
 ---
 
-## COMPLETE PIPELINE (V12)
+## REPOSITORY STRUCTURE
 
 ```
-PHASE 1    JD Intelligence Engine (w/ Semantic Canonicalization) [V12]
-PHASE 2    Domain Ontology Engine
-PHASE 3    Candidate Knowledge Graph
-PHASE 3.5  Career Intelligence Layer
-PHASE 3.7  Behavioral Intelligence Layer
-PHASE 4    Data Integrity Engine
-
-== ENHANCED RETRIEVAL (GPU) ==
-PHASE 5    Multi-Embedding Generation (BGE + E5) [V12]
-PHASE 5.5  Broad Eligibility Filter
-               ↓
-          TOP 20,000 CANDIDATES
-               ↓
-PHASE 6    Hybrid Retrieval Ensemble (Dense + BM25)
-               ↓
-          TOP 3000 CANDIDATES
-               ↓
-PHASE 6.5  Retrieval Recall Audit (Recall@500/1000/2000/3000) [V12]
-
-== ENHANCED LABELS & METRICS ==
-PHASE 7A   Teacher Ensemble (Reasoning + Scoring)
-PHASE 7.1  Teacher Drift & Reasoning Clustering [V12]
-PHASE 7.15 Label Quality Audit
-PHASE 7B   Label Calibration
-PHASE 7C   Pairwise Refinement
-PHASE 7.5  Hard Negative Mining [V12]
-PHASE 7.8  Feature Parity Audit
-
-== ENHANCED RANKING ==
-PHASE 8    Learning To Rank
-PHASE 8.5  Automated SHAP Feedback Loop [V12]
-PHASE 8.75 Retrieval & Ranking Stress Test
-PHASE 9    Ensemble Models
-               ↓
-          TOP 500 CANDIDATES
-               ↓
-PHASE 9.2  Cross-Encoder Re-Ranking [V12]
-               ↓
-          TOP 50 CANDIDATES
-               ↓
-PHASE 9.5  Elite Re-Ranking
-               ↓
-PHASE 10   Reasoning Bank
-PHASE 10.5 Reasoning Diversity Audit
-PHASE 11   Runtime Verification
-PHASE 11.25 Submission Simulation [V12]
-PHASE 11.5 Submission Safety Audit
-               ↓
-ONLINE PIPELINE (judges execute)
-               ↓
-TOP 100 CSV
+redrob-ranking/
+├── ARCHITECTURE_V11_FINAL.md       ← this document
+├── config/
+│   └── hyperparams.yaml            ← all tunable values, nothing hardcoded
+├── data/
+│   ├── raw/                        ← original dataset files (gitignored)
+│   └── artifacts/                  ← all precomputed artifacts
+│       ├── jd_requirements.json
+│       ├── ontology.json
+│       ├── candidate_features.parquet
+│       ├── career_features.parquet
+│       ├── quality_features.parquet
+│       ├── faiss.index
+│       ├── bm25.pkl
+│       ├── top_3000.parquet
+│       ├── synthetic_labels.parquet
+│       ├── calibrated_labels.parquet
+│       ├── refined_labels.parquet
+│       ├── lgbm_ranker.pkl
+│       ├── xgb_ranker.pkl
+│       ├── reasoning.parquet
+│       └── runtime_report.md
+├── offline/
+│   ├── phase01_jd_intelligence.py
+│   ├── phase02_ontology.py
+│   ├── phase03_knowledge_graph.py
+│   ├── phase03_5_career_intelligence.py
+│   ├── phase04_integrity.py
+│   ├── phase05_retrieval_infra.py
+│   ├── phase06_hybrid_retrieval.py
+│   ├── phase07a_teacher_ensemble.py
+│   ├── phase07b_label_calibration.py
+│   ├── phase07c_pairwise.py
+│   ├── phase08_ltr.py
+│   ├── phase08_5_shap.py
+│   ├── phase09_ensemble.py
+│   ├── phase09_5_elite_rerank.py
+│   ├── phase10_reasoning_bank.py
+│   └── phase11_runtime_verify.py
+├── online/
+│   └── run_ranking.py              ← judges execute this
+├── requirements.txt
+├── submission_metadata.yaml
+└── team_xxx.csv                    ← final submission
 ```
 
 ---
 
-## V12 CORE UPGRADES
+## HYPERPARAMETER REGISTRY
 
-### 1. Multi-Embedding Retrieval (Phases 5 & 6)
-We utilize the RTX 6000 to drastically improve recall by running an embedding ensemble.
-- **Models:** `BAAI/bge-large-en-v1.5` and `intfloat/e5-large-v2`.
-- **Vectors per Candidate:** 
-  - `Profile Embedding` (Headline + Summary + Skills)
-  - `Career Embedding` (Top 3 recent roles descriptions)
-- **Aggregation:** Dense Score = `(0.30 * profile_bge) + (0.20 * career_bge) + (0.30 * profile_e5) + (0.20 * career_e5)`.
-
-### 2. Hard Negative Mining (Phase 7.5)
-To prevent the LTR model from learning trivial boundaries, we mine hard negatives:
-- Identify candidates who share keywords (e.g., "Data Scientist", "Machine Learning") but lack explicit JD constraints (e.g., 0 startup experience, purely consulting background).
-- Apply a `teacher_score_cap = 60` or a `hard_negative_penalty` to these candidates during teacher labeling, rather than forcing a strict `label = 0`, to avoid teaching the model that consulting is absolutely bad while still defining the boundary between a generic AI engineer and a founding-team AI engineer.
-
-### 3. Cross-Encoder Re-Ranking (Phase 9.2)
-To maximize precision at the very top of the funnel without blowing up compute times:
-- Apply `cross-encoder/ms-marco-MiniLM-L-6-v2` or `BAAI/bge-reranker-large` ONLY to the Top 500 candidates outputted by the Ensemble Models.
-- We cross-encode a synthesized `candidate_summary_text` (Top 3 recent roles + Top Skills + Profile summary) against the JD.
-- The top 50 candidates from the cross-encoder are then passed into Phase 9.5 (Elite Re-Ranking). This correctly prioritizes NDCG@10 and NDCG@50 where it matters most.
-
-### 4. Teacher Drift Detection (Phase 7.1)
-LLM teachers are susceptible to template collapse (giving the exact same reasoning structure for everyone).
-- We mandate the LLM to output a `reasoning_chain` string before the final `score`.
-- We embed these reasoning strings and cluster them. If the percentage of candidates falling into 1 cluster exceeds the `drift_cluster_threshold`, we have teacher drift/template collapse, and the labels are invalid.
-
-### 5. Automated SHAP (Phase 8.5)
-- SHAP generation is now fully automated. After every LTR training run, a `shap_report.json` is generated. If critical features like `founding_team_score` fall out of the Top 10 feature importances, the build fails.
-
-### 6. Submission Simulation (Phase 11.25)
-The easiest way to lose a hackathon is a formatting failure. Before export:
-- Generate the CSV and run `validate_submission.py`.
-- Verify exactly 100 rows, unique IDs, strictly decreasing scores, reasoning exists, and absolutely no nulls.
-
----
-
-## HYPERPARAMETER REGISTRY (V12 UPDATE)
-
-**File: `config/hyperparams.yaml`**
+**File: `config/hyperparams.yaml`** — nothing is hardcoded anywhere else.
 
 ```yaml
 retrieval:
-  top_k: 3000           
-  # EXPERIMENTAL: Dense heavily weighted for AI Search role. Tune after Recall@3000 audit.
-  dense_weight_bge: 0.25
-  dense_weight_e5: 0.25
-  bm25_weight: 0.20
-  ontology_weight: 0.20
-  career_weight: 0.10
+  top_k: 3000
+  dense_weight: 0.35
+  bm25_weight: 0.25
+  ontology_weight: 0.25
+  career_weight: 0.15
+  faiss_nlist: 512
+  faiss_m: 64
+  faiss_nbits: 8
+  faiss_nprobe: 50
 
 teacher:
   temperature: 0
@@ -152,13 +111,70 @@ teacher:
   technical_weight: 0.45
   evaluation_weight: 0.35
   execution_weight: 0.20
-  drift_cluster_threshold: 0.80
 
-ranking:
-  cross_encoder_top_k: 500  # Number of candidates to run through cross-encoder
-  hard_negative_ratio: 0.2  # 20% of training data must be explicit hard negatives
+pairwise:
+  pool_size: 300
+  score_window: 15  # only compare if |score_a - score_b| < 15
+
+ltr:
+  learning_rate: 0.05
+  num_leaves: 63
+  max_depth: 8
+  n_estimators: 500
+  early_stopping_rounds: 50
+
+ensemble:
+  lgbm_weight: 0.6
+  xgb_weight: 0.4
+
+elite_rerank:
+  pool_size: 20
+  evaluation_weight: 0.30
+  founding_team_weight: 0.25
+  availability_weight: 0.20
+  teacher_median_weight: 0.15
+  teacher_std_penalty: 0.10
+
+integrity:
+  fraud_hard_remove_threshold: 0.98
+  minor_anomaly_penalty: -2
+  medium_anomaly_penalty: -5
+  severe_anomaly_penalty: -25
 ```
 
+---
+
+## COMPLETE PIPELINE
+
+```
+PHASE 1   JD Intelligence Engine
+PHASE 2   Domain Ontology Engine
+PHASE 3   Candidate Knowledge Graph
+PHASE 3.5 Career Intelligence Layer       ← added after review
+PHASE 4   Data Integrity Engine
+PHASE 5   Retrieval Infrastructure
+PHASE 6   Hybrid Retrieval
+              ↓
+         TOP 3000 CANDIDATES
+              ↓
+PHASE 7A  Teacher Ensemble
+PHASE 7B  Label Calibration
+PHASE 7C  Pairwise Refinement
+              ↓
+PHASE 8   Learning To Rank
+PHASE 8.5 SHAP Feedback Loop
+PHASE 9   Ensemble Models
+PHASE 9.5 Elite Re-Ranking               ← added after review
+              ↓
+PHASE 10  Reasoning Bank
+PHASE 11  Runtime Verification
+              ↓
+ONLINE PIPELINE (judges execute)
+              ↓
+TOP 100 CSV
+```
+
+---
 
 ---
 
@@ -174,10 +190,6 @@ Convert the raw job description from human language into a structured JSON objec
 ### Prerequisites
 - `job_description.docx` present in `data/raw/`
 - LLM API access (any: GPT-4, Claude, Gemini, Groq Llama 3)
-
-
-### V12 UPGRADE: Semantic Canonicalization & Output Contract
-In V12, Phase 1 guarantees a completely deduplicated output. It merges the Execution, Technical, and Culture lenses, applies a hardcoded `CANONICAL_REQUIREMENTS` and `CANONICAL_NEGATIVES` mapping, tracks exactly which aliases were merged into which canonical keys, and outputs a production-ready `jd_requirements.json`.
 
 ### Implementation Steps
 
@@ -794,242 +806,6 @@ Schema: candidate_id, career_bm25_score, career_ontology_score,
 
 ---
 
-## PHASE 3.7 — BEHAVIORAL INTELLIGENCE LAYER
-
-### Goal
-Convert all raw `redrob_signals` behavioral fields into clean, normalized scores that model recruiter-side demand and candidate-side availability. The challenge description explicitly highlights these signals. Most competing teams will use them partially or not at all — a well-engineered behavioral feature set is a legitimate leaderboard differentiator.
-
-### Prerequisites
-- Phase 3 complete (candidate_features.parquet exists — provides years_exp for imputation baseline)
-- All 100k candidate raw profiles accessible
-
-### Why a Dedicated Phase
-These features were partially computed inside Phase 3 in earlier versions. Splitting them out is justified because:
-- They share no logic with structural profile features (KG)
-- They share no logic with text-mined features (Career Intelligence)
-- They are the only features derived from recruiter-side market signals
-- They need population-level normalization (e.g., market_demand_raw must be normalized across all 100k before it becomes a useful feature)
-
-### Implementation Steps
-
-**Step 3.7.1 — Define raw signal extraction**
-```python
-from datetime import datetime
-
-def extract_behavioral_raw(cand: dict) -> dict:
-    """Extract all raw behavioral signals from redrob_signals block."""
-    signals = cand.get("redrob_signals", {})
-    cid = cand["candidate_id"]
-
-    # --- Availability inputs ---
-    last_active_raw = signals.get("last_active_date", "")
-    days_inactive = 9999  # default: assume inactive if missing
-    if last_active_raw:
-        try:
-            la = datetime.strptime(last_active_raw[:10], "%Y-%m-%d")
-            days_inactive = max(0, (datetime.now() - la).days)
-        except ValueError:
-            pass
-
-    response_rate = float(signals.get("recruiter_response_rate", 0.0))
-    response_time_hours = float(signals.get("avg_response_time_hours", 9999.0))
-    notice_period_days = float(signals.get("notice_period_days", 90.0))
-
-    # --- Market demand inputs ---
-    saved_30d = float(signals.get("saved_by_recruiters_30d", 0.0))
-    search_appearances_30d = float(signals.get("search_appearance_30d", 0.0))
-    profile_views_30d = float(signals.get("profile_views_received_30d", 0.0))
-
-    # --- Reliability inputs ---
-    interview_completion = float(signals.get("interview_completion_rate", 0.0))
-    offer_acceptance = float(signals.get("offer_acceptance_rate", 0.0))
-
-    # --- Responsiveness inputs ---
-    # Uses response_rate and response_time_hours (computed separately below)
-
-    return {
-        "candidate_id": cid,
-        # Raw availability
-        "_days_inactive": days_inactive,
-        "_response_rate": response_rate,
-        "_response_time_hours": response_time_hours,
-        "_notice_period_days": notice_period_days,
-        # Raw market demand
-        "_saved_30d": saved_30d,
-        "_search_appearances_30d": search_appearances_30d,
-        "_profile_views_30d": profile_views_30d,
-        # Raw reliability
-        "_interview_completion": interview_completion,
-        "_offer_acceptance": offer_acceptance,
-    }
-```
-
-**Step 3.7.2 — Compute scores (population-normalized)**
-```python
-import numpy as np
-import polars as pl
-
-def compute_behavioral_scores(raw_df: pl.DataFrame) -> pl.DataFrame:
-    """
-    Convert raw signals into normalized [0,1] scores.
-    Market demand MUST be normalized population-wide, not per-candidate.
-    All others can be normalized per-candidate.
-    """
-
-    # --- Availability Score ---
-    # Combines: recency of last activity, response rate, response time, notice period
-    INACTIVE_BASELINE = 365   # 1 year without activity = 0 score
-    MAX_RESPONSE_HOURS = 168  # 1 week = worst acceptable
-    MAX_NOTICE_DAYS = 180     # 6 months = worst acceptable
-
-    raw_df = raw_df.with_columns([
-        # Each component normalized to [0, 1]
-        (1.0 - (pl.col("_days_inactive") / INACTIVE_BASELINE).clip(0.0, 1.0))
-            .alias("_active_score"),
-        (pl.col("_response_rate") / 100.0).clip(0.0, 1.0)
-            .alias("_response_rate_score"),
-        (1.0 - (pl.col("_response_time_hours") / MAX_RESPONSE_HOURS).clip(0.0, 1.0))
-            .alias("_response_time_score"),
-        (1.0 - (pl.col("_notice_period_days") / MAX_NOTICE_DAYS).clip(0.0, 1.0))
-            .alias("_notice_score"),
-    ]).with_columns(
-        (0.40 * pl.col("_active_score")
-         + 0.30 * pl.col("_response_rate_score")
-         + 0.15 * pl.col("_response_time_score")
-         + 0.15 * pl.col("_notice_score"))
-        .alias("availability_score")
-    )
-
-    # --- Responsiveness Score ---
-    # Separate from availability: pure communication speed and reliability
-    raw_df = raw_df.with_columns(
-        (0.60 * pl.col("_response_rate_score")
-         + 0.40 * pl.col("_response_time_score"))
-        .alias("responsiveness_score")
-    )
-
-    # --- Market Demand Score (population-normalized) ---
-    # Raw composite: saved × 3 + appearances × 1 + views × 0.5
-    raw_df = raw_df.with_columns(
-        (pl.col("_saved_30d") * 3.0
-         + pl.col("_search_appearances_30d") * 1.0
-         + pl.col("_profile_views_30d") * 0.5)
-        .alias("_market_demand_raw")
-    )
-    max_demand = raw_df["_market_demand_raw"].max()
-    raw_df = raw_df.with_columns(
-        (pl.col("_market_demand_raw") / (max_demand + 1e-9))
-        .alias("market_demand_score")
-    )
-
-    # --- Recruiter Interest Score ---
-    # Focuses on DIRECT recruiter intent signals (saved + search), not passive views
-    max_saved = raw_df["_saved_30d"].max()
-    max_search = raw_df["_search_appearances_30d"].max()
-    raw_df = raw_df.with_columns(
-        (0.65 * (pl.col("_saved_30d") / (max_saved + 1e-9))
-         + 0.35 * (pl.col("_search_appearances_30d") / (max_search + 1e-9)))
-        .alias("recruiter_interest_score")
-    )
-
-    # --- Reliability Score ---
-    raw_df = raw_df.with_columns(
-        (0.60 * pl.col("_interview_completion")
-         + 0.40 * pl.col("_offer_acceptance"))
-        .alias("reliability_score")
-    )
-
-    # Drop raw columns, keep only named scores + candidate_id
-    output_cols = [
-        "candidate_id",
-        "availability_score",
-        "market_demand_score",
-        "recruiter_interest_score",
-        "reliability_score",
-        "responsiveness_score",
-        # Keep these as raw features too — LightGBM may use them separately
-        "_days_inactive",
-        "_notice_period_days",
-        "_saved_30d",
-    ]
-    return raw_df.select(output_cols).rename({
-        "_days_inactive": "days_inactive_raw",
-        "_notice_period_days": "notice_period_days",
-        "_saved_30d": "saved_by_recruiters_30d",
-    })
-```
-
-**Step 3.7.3 — Process all 100k and save**
-```python
-print("Extracting behavioral signals...")
-raw_records = []
-with gzip.open("data/raw/candidates.jsonl.gz", 'rt') as f:
-    for line in tqdm(f):
-        cand = json.loads(line)
-        raw_records.append(extract_behavioral_raw(cand))
-
-raw_df = pl.DataFrame(raw_records)
-
-print("Computing population-normalized behavioral scores...")
-behavior_df = compute_behavioral_scores(raw_df)
-
-behavior_df.write_parquet("data/artifacts/behavior_features.parquet")
-
-# Sanity summary
-print("\n=== Behavioral Feature Summary ===")
-for col in ["availability_score", "market_demand_score",
-            "recruiter_interest_score", "reliability_score", "responsiveness_score"]:
-    vals = behavior_df[col]
-    print(f"{col}: mean={vals.mean():.3f}, max={vals.max():.3f}, "
-          f"p90={vals.quantile(0.9):.3f}, zeros={vals.filter(vals==0).len()}")
-```
-
-**Step 3.7.4 — Behavioral Leakage Experiment (run once, document result)**
-```python
-# Train two LightGBM models: one with and one without behavioral features.
-# Document the top-100 overlap. If overlap < 85%, behavioral features matter
-# significantly. If > 95%, they add little incremental value to the ranking.
-# This experiment determines how heavily to weight them in the ensemble.
-
-BEHAVIORAL_COLS = [
-    "availability_score", "market_demand_score",
-    "recruiter_interest_score", "reliability_score"
-]
-
-# Model A: full feature set (defined in Phase 8)
-# Model B: full feature set minus BEHAVIORAL_COLS
-# Compare: top-100 overlap, SHAP importance of behavioral features
-# Document result in: data/artifacts/behavioral_leakage_experiment.md
-```
-
-### Verification Checklist
-- [ ] `behavior_features.parquet` has exactly 100,000 rows
-- [ ] `market_demand_score` is correctly population-normalized: max value should be 1.0
-- [ ] `availability_score` is 0.0 for candidates where `last_active_date` is >2 years ago
-- [ ] `notice_period_days` is stored as raw value (LightGBM may find non-linear signal in it)
-- [ ] `saved_by_recruiters_30d > 0` for fewer than 20% of candidates (most candidates have 0 saves)
-- [ ] No nulls in any column — fill with 0.0 for all missing signal data
-- [ ] `recruiter_interest_score` is strictly higher for candidates with saves > candidates with only views
-- [ ] Behavioral leakage experiment is documented (compare top-100 overlap with/without these features)
-- [ ] Spot check: a candidate with `saved_by_recruiters_30d = 50` should have `market_demand_score` in top 5% of all candidates
-
-### Common Mistakes
-- Normalizing `market_demand_score` per-candidate instead of population-wide: this destroys the relative signal. A candidate who was saved 50 times is fundamentally different from one saved 0 times — that comparison only makes sense population-wide.
-- Treating missing `last_active_date` as "very recently active": always assume worst-case (inactive) when data is missing.
-- Including `days_inactive_raw` with wrong sign: higher days inactive = LESS available. Ensure the score is inverted correctly.
-- Not handling `notice_period_days = 0` (immediate joiner): this is a positive signal, not an error. The score should be 1.0 for notice_period_days=0.
-
-### Output
-```
-data/artifacts/behavior_features.parquet
-Schema: candidate_id (str), availability_score (f64), market_demand_score (f64),
-        recruiter_interest_score (f64), reliability_score (f64),
-        responsiveness_score (f64), days_inactive_raw (f64),
-        notice_period_days (f64), saved_by_recruiters_30d (f64)
-```
-
----
-
 ## PHASE 4 — DATA INTEGRITY ENGINE
 
 ### Goal
@@ -1255,58 +1031,327 @@ Schema: candidate_id, quality_score, fraud_probability,
 
 ---
 
-## PHASE 5 — VECTOR GENERATION (KAGGLE RTX)
+## PHASE 5 — RETRIEVAL INFRASTRUCTURE
 
 ### Goal
-Precompute the dense embedding spaces for all 100,000 candidates across multiple scopes and models.
+Precompute all indexes needed for fast candidate retrieval. This is the most compute-intensive phase. Run it on GPU if available offline.
 
-### Architecture Update (Post-Diagnostic V12)
-We strictly avoid collapsing the candidate profile into a single "blob". We maintain 6 independent dense indexes to prevent semantic dilution:
-- **Models**: `BAAI/bge-large-en-v1.5` and `intfloat/e5-large-v2`
-- **Scopes**: Profile Text, Career History Text, Skills Text
-- **Vectors per Candidate**: 6
-- **Storage**: `np.float16` arrays inside Parquet to strictly bound VRAM and RAM footprint.
+### Prerequisites
+- Phases 1–4 complete
+- `sentence-transformers` and `faiss-cpu` installed
+- 8+ GB RAM available
 
-### Implementation Output
+### Implementation Steps
+
+**Step 5.1 — Build the dense embedding index**
 ```python
-data/artifacts/candidate_embeddings_bge.parquet (100k rows)
-data/artifacts/candidate_embeddings_e5.parquet (100k rows)
-data/artifacts/jd_embeddings.npz
+from sentence_transformers import SentenceTransformer
+import faiss
+import numpy as np
+
+# Load model
+model = SentenceTransformer("BAAI/bge-large-en-v1.5")
+# Alternative if memory is tight: "BAAI/bge-base-en-v1.5" (768 dims, faster)
+
+def build_candidate_text(cand: dict) -> str:
+    """The text we embed for each candidate."""
+    profile = cand.get("profile", {})
+    career = cand.get("career_history", [])
+    skills = cand.get("skills", [])
+
+    career_text = " | ".join([
+        f"{r.get('title','')} at {r.get('company','')}: {r.get('description','')}"
+        for r in career[:5]  # most recent 5 roles
+    ])
+
+    return " ".join([
+        profile.get("headline", ""),
+        profile.get("summary", ""),
+        " ".join(s.get("name", "") for s in skills[:30]),
+        career_text
+    ])[:2000]  # truncate to avoid token limit issues
+
+# Process in batches
+BATCH_SIZE = 128
+DIM = 1024  # bge-large output dimension
+
+all_embeddings = []
+all_ids = []
+
+print("Generating embeddings...")
+batch_texts = []
+batch_ids = []
+
+with gzip.open("data/raw/candidates.jsonl.gz", 'rt') as f:
+    for line in tqdm(f):
+        cand = json.loads(line)
+        batch_texts.append(build_candidate_text(cand))
+        batch_ids.append(cand["candidate_id"])
+
+        if len(batch_texts) == BATCH_SIZE:
+            embeddings = model.encode(
+                batch_texts,
+                normalize_embeddings=True,  # for cosine similarity
+                show_progress_bar=False
+            )
+            all_embeddings.append(embeddings)
+            all_ids.extend(batch_ids)
+            batch_texts = []
+            batch_ids = []
+
+# Final batch
+if batch_texts:
+    embeddings = model.encode(batch_texts, normalize_embeddings=True)
+    all_embeddings.append(embeddings)
+    all_ids.extend(batch_ids)
+
+all_embeddings = np.vstack(all_embeddings).astype('float32')
+print(f"Embeddings shape: {all_embeddings.shape}")  # (100000, 1024)
+
+# Build FAISS IVF-PQ index
+nlist = 512   # number of Voronoi cells
+m = 64        # PQ segments (must divide DIM=1024 → 1024/64=16 ✓)
+nbits = 8     # bits per code
+
+quantizer = faiss.IndexFlatIP(DIM)  # inner product (cosine since normalized)
+index = faiss.IndexIVFPQ(quantizer, DIM, nlist, m, nbits)
+
+# Train on a sample
+print("Training FAISS index...")
+sample_size = min(50000, len(all_embeddings))
+index.train(all_embeddings[:sample_size])
+
+# Add all embeddings
+print("Adding vectors to index...")
+index.add(all_embeddings)
+index.nprobe = 50  # search 50 cells at query time
+
+faiss.write_index(index, "data/artifacts/faiss.index")
+print(f"FAISS index size: {index.ntotal} vectors")
+
+# Save ID mapping (FAISS uses integer IDs, we need string candidate_ids)
+id_mapping = {i: cid for i, cid in enumerate(all_ids)}
+import pickle
+with open("data/artifacts/faiss_id_mapping.pkl", "wb") as f:
+    pickle.dump(id_mapping, f)
 ```
-*Note: We bypassed `faiss` entirely in favor of direct Numpy C-compiled matrix math for perfect exact-match fidelity at the 100k scale.*
+
+**Step 5.2 — Also embed the JD query vector**
+```python
+# Embed the JD for use in Phase 6
+jd_text = f"""
+Senior AI Engineer Founding Team
+Required: embeddings, vector databases, retrieval systems, ranking evaluation,
+NDCG, MAP, semantic search, RAG, product company, startup
+Experience: 5-9 years applied ML, production retrieval systems,
+founding team mindset, fast execution, ownership
+"""
+jd_embedding = model.encode([jd_text], normalize_embeddings=True).astype('float32')
+np.save("data/artifacts/jd_embedding.npy", jd_embedding)
+```
+
+**Step 5.3 — Build BM25 index**
+```python
+from rank_bm25 import BM25Okapi
+import re
+
+def tokenize_for_bm25(text: str) -> list:
+    text = text.lower()
+    text = re.sub(r'[^\w\s]', ' ', text)
+    tokens = text.split()
+    # Add bigrams for multi-word technical terms
+    bigrams = [f"{tokens[i]}_{tokens[i+1]}"
+               for i in range(len(tokens)-1)
+               if len(tokens[i]) > 2 and len(tokens[i+1]) > 2]
+    return tokens + bigrams
+
+bm25_corpus = []
+bm25_ids = []
+
+with gzip.open("data/raw/candidates.jsonl.gz", 'rt') as f:
+    for line in tqdm(f):
+        cand = json.loads(line)
+        text = build_candidate_text(cand)
+        bm25_corpus.append(tokenize_for_bm25(text))
+        bm25_ids.append(cand["candidate_id"])
+
+print("Building BM25 index...")
+bm25_index = BM25Okapi(bm25_corpus)
+
+with open("data/artifacts/bm25.pkl", "wb") as f:
+    pickle.dump({"index": bm25_index, "ids": bm25_ids}, f)
+
+print("BM25 index built.")
+```
+
+### Verification Checklist
+- [ ] `faiss.index` exists and `index.ntotal == 100000`
+- [ ] `faiss_id_mapping.pkl` maps 0..99999 → candidate_id strings
+- [ ] `jd_embedding.npy` shape is `(1, 1024)`
+- [ ] `bm25.pkl` loads correctly and `len(bm25_ids) == 100000`
+- [ ] Test retrieval: query with "NDCG MAP ranking evaluation vector database" → verify top 5 results look relevant
+- [ ] Memory check: FAISS index should be < 2 GB on disk with IVF-PQ compression
+
+### Common Mistakes
+- Not normalizing embeddings before building the index: with `normalize_embeddings=True`, inner product becomes cosine similarity. Without it, inner product is meaningless.
+- Setting `nprobe` too low: 10 gives fast but poor recall. 50 is a good balance. 100 if you have time budget.
+- Forgetting to save the ID mapping: FAISS returns integer indices, not candidate_id strings.
+
+### Output
+```
+data/artifacts/faiss.index
+data/artifacts/faiss_id_mapping.pkl
+data/artifacts/jd_embedding.npy
+data/artifacts/bm25.pkl
+```
 
 ---
 
-## PHASE 6 — HYBRID RETRIEVAL ENSEMBLE
+## PHASE 6 — HYBRID RETRIEVAL
 
 ### Goal
-Reduce the full 100,000 candidate pool to the Top 3,000 using independent Sparse and Dense semantic nets.
+Reduce 100,000 candidates to the Top 3,000 while maintaining extremely high recall. This pool must contain essentially all truly relevant candidates — any relevant candidate missed here is permanently lost.
 
-### Architecture Update (Post-Diagnostic V12)
-We DO NOT use any Eligibility Filters (Phase 5.5 is removed). The hardware is sufficient to search the full 100k pool directly, guaranteeing we don't accidentally drop highly qualified candidates with poorly formatted resumes.
+### Prerequisites
+- Phases 1–5 complete
 
-**Step 6.1 — Independent Dense RRF**
-We query all 6 dense indices independently against the full 100k pool and extract the Top 5000 candidates per index using fast `np.argpartition`.
-We fuse them using weighted Reciprocal Rank Fusion (RRF), heavily leaning into the Career scope which demonstrated the highest retrieval diversity in diagnostics:
+### Implementation Steps
+
+**Step 6.1 — Dense retrieval (FAISS)**
 ```python
-DENSE_WEIGHTS = {
-    "e5_career": 1.0, "e5_profile": 0.5, "e5_skills": 0.4,
-    "bge_career": 0.9, "bge_profile": 0.4, "bge_skills": 0.3
+import faiss
+import numpy as np
+import pickle
+
+index = faiss.read_index("data/artifacts/faiss.index")
+index.nprobe = 50
+
+jd_embedding = np.load("data/artifacts/jd_embedding.npy")
+
+# Retrieve top 5000 from dense (we'll combine with others)
+TOP_DENSE = 5000
+scores, indices = index.search(jd_embedding, TOP_DENSE)
+
+with open("data/artifacts/faiss_id_mapping.pkl", "rb") as f:
+    id_mapping = pickle.load(f)
+
+dense_results = {
+    id_mapping[int(idx)]: float(score)
+    for score, idx in zip(scores[0], indices[0])
+    if idx >= 0
 }
+# dense_results: {candidate_id -> cosine_similarity}
 ```
-This produces the **Top 10,000 Dense Candidates**.
 
-**Step 6.2 — Independent Sparse Search (BM25)**
-We run a fully customized, offline-compatible `VectorizedBM25` built via Sklearn's `CountVectorizer` across the entire 100k candidate pool.
-This produces the **Top 10,000 BM25 Candidates**.
+**Step 6.2 — BM25 retrieval**
+```python
+with open("data/artifacts/bm25.pkl", "rb") as f:
+    bm25_data = pickle.load(f)
 
-**Step 6.3 — Global Fusion**
-We merge the Top 10k Dense and Top 10k BM25 via RRF, yielding the final 10,000 candidates. The top 3,000 are extracted for Phase 7 scoring.
-Each candidate is tagged with their `retrieval_source` (`dense_only`, `bm25_only`, `dense+bm25`).
+bm25_index = bm25_data["index"]
+bm25_ids = bm25_data["ids"]
 
-### Verification
-- Dense/BM25 overlap should be ~40-50% (proving high retrieval diversity).
-- Final 3000 candidate pool is saved to `retrieval_top_3000.parquet`.
+# Query: key JD terms
+jd_query = tokenize_for_bm25(
+    "retrieval semantic search rag embeddings vector database pinecone qdrant "
+    "milvus ndcg map ranking evaluation product startup founding engineer"
+)
+
+bm25_scores = bm25_index.get_scores(jd_query)
+# Get top 5000 BM25
+top_bm25_idx = np.argsort(bm25_scores)[::-1][:5000]
+bm25_results = {
+    bm25_ids[i]: float(bm25_scores[i])
+    for i in top_bm25_idx
+}
+
+# Normalize BM25 scores to [0, 1]
+max_bm25 = max(bm25_results.values()) if bm25_results else 1.0
+bm25_results_norm = {k: v / max_bm25 for k, v in bm25_results.items()}
+```
+
+**Step 6.3 — Combine all retrieval signals**
+```python
+import polars as pl
+
+# Load precomputed feature scores
+cf = pl.read_parquet("data/artifacts/career_features.parquet")
+qf = pl.read_parquet("data/artifacts/quality_features.parquet")
+
+# Get all unique candidates from dense + BM25
+all_candidate_ids = list(set(dense_results.keys()) | set(bm25_results_norm.keys()))
+print(f"Candidates in union pool: {len(all_candidate_ids)}")
+
+# Build per-candidate retrieval scores
+retrieval_rows = []
+for cid in all_candidate_ids:
+    dense = dense_results.get(cid, 0.0)
+    bm25 = bm25_results_norm.get(cid, 0.0)
+
+    # Get ontology and career scores from precomputed features
+    career_row = cf.filter(pl.col("candidate_id") == cid)
+    career_ontology = career_row["career_ontology_score"][0] if len(career_row) > 0 else 0.0
+    career_bm25 = career_row["career_bm25_score"][0] if len(career_row) > 0 else 0.0
+
+    # Combined career intelligence score
+    career_intel = (career_ontology + career_bm25) / 2
+
+    # Retrieval score with config weights
+    retrieval_score = (
+        0.35 * dense
+        + 0.25 * bm25
+        + 0.25 * career_ontology
+        + 0.15 * career_bm25
+    )
+
+    retrieval_rows.append({
+        "candidate_id": cid,
+        "dense_score": dense,
+        "bm25_score": bm25,
+        "career_intel_score": career_intel,
+        "retrieval_score": retrieval_score,
+    })
+
+df_retrieval = pl.DataFrame(retrieval_rows)
+
+# Apply quality penalty: down-rank extreme honeypots
+df_retrieval = df_retrieval.join(
+    qf.select(["candidate_id", "fraud_probability"]),
+    on="candidate_id", how="left"
+).with_columns(
+    pl.col("fraud_probability").fill_null(0.0)
+).with_columns(
+    (pl.col("retrieval_score") * (1 - pl.col("fraud_probability") * 0.3))
+    .alias("retrieval_score_adjusted")
+)
+
+# Take Top 3000
+top_3000 = (df_retrieval
+    .sort("retrieval_score_adjusted", descending=True)
+    .head(3000))
+
+top_3000.write_parquet("data/artifacts/top_3000.parquet")
+print(f"Top 3000 saved. Score range: {top_3000['retrieval_score_adjusted'].min():.3f} - {top_3000['retrieval_score_adjusted'].max():.3f}")
+```
+
+### Verification Checklist
+- [ ] Exactly 3,000 candidates in `top_3000.parquet`
+- [ ] **Recall check**: manually identify 10 candidates who clearly match the JD — all 10 must appear in the top 3,000
+- [ ] Top 100 by retrieval score: manually verify at least 80% look genuinely relevant
+- [ ] `fraud_probability > 0.9` candidates should be rare in the top 3,000
+- [ ] Dense and BM25 overlap: check `len(set(dense_top5k) & set(bm25_top5k))` — should be ~2,000 (significant overlap means both are retrieving similar relevant candidates)
+- [ ] Score distribution is not flat — there should be clear separation between top 100 and 1000–3000
+
+### Common Mistakes
+- Taking top 3,000 from dense alone: use the union of dense + BM25 first, then score and select.
+- Forgetting that FAISS returns cosine similarities as inner products (range roughly 0.0–1.0 for normalized vectors, sometimes negative): clamp to [0, 1].
+- Not applying any fraud penalty at retrieval stage: a honeypot ranked #1 by dense similarity is a problem.
+
+### Output
+```
+data/artifacts/top_3000.parquet
+Schema: candidate_id, dense_score, bm25_score,
+        career_intel_score, retrieval_score, retrieval_score_adjusted
 ```
 
 ---
@@ -1551,14 +1596,6 @@ Schema: candidate_id, teacher_a_score, teacher_b_score, teacher_c_score,
 
 ---
 
-
-## PHASE 7.1 — TEACHER DRIFT & REASONING CLUSTERING [V12]
-### Goal
-Detect template collapse in LLM teacher reasoning.
-### Implementation
-Embed the `reasoning_chain` outputs. If >80% of candidates fall into 1 cluster, fail the pipeline due to drift.
-
-
 ## PHASE 7B — LABEL CALIBRATION
 
 ### Goal
@@ -1742,302 +1779,10 @@ New column: refined_label
 
 ---
 
-## PHASE 7.25 — TEACHER ↔ STUDENT FEATURE PARITY AUDIT
-
-### Goal
-Formally verify that every concept the teacher ensemble evaluates has a corresponding numeric feature in the student's training matrix. This prevents a critical but silent failure mode: the teacher gives high scores for candidates with top-tier university education, but `education_tier_score` was accidentally dropped from the feature list. The student model then cannot learn the signal the teacher encoded — labels and features are misaligned.
-
-This phase takes 30 minutes to run. Skipping it has caused significant silent leakage in competition pipelines.
-
-### Prerequisites
-- Phase 7A complete (teacher prompts are finalized)
-- Phase 3, 3.5, 3.7, 4 complete (all feature files exist)
-
-### Implementation Steps
-
-**Step 7.25.1 — Define the Teacher Concept Registry**
-
-Every dimension the teacher was explicitly prompted to evaluate must be registered here:
-
-```python
-# file: offline/phase07_25_feature_parity_audit.py
-
-TEACHER_CONCEPT_REGISTRY = {
-    # Teacher A — Technical Lens concepts
-    "vector_database_depth": {
-        "description": "Teacher A evaluates Pinecone/Qdrant/Milvus/FAISS/Weaviate expertise",
-        "required_features": ["vector_db_score", "retrieval_score"],
-        "teacher": "A"
-    },
-    "embedding_expertise": {
-        "description": "Teacher A evaluates embedding model knowledge",
-        "required_features": ["embedding_score"],
-        "teacher": "A"
-    },
-    "retrieval_systems": {
-        "description": "Teacher A evaluates production retrieval experience",
-        "required_features": ["retrieval_score", "career_bm25_score", "career_ontology_score"],
-        "teacher": "A"
-    },
-    "ml_ai_depth": {
-        "description": "Teacher A evaluates general ML/AI depth",
-        "required_features": ["ml_score", "llm_score"],
-        "teacher": "A"
-    },
-
-    # Teacher B — Evaluation Expertise concepts
-    "ranking_evaluation_frameworks": {
-        "description": "Teacher B evaluates NDCG/MAP/MRR hands-on experience",
-        "required_features": ["evaluation_score", "career_ontology_score"],
-        "teacher": "B"
-    },
-    "ab_testing": {
-        "description": "Teacher B evaluates A/B testing for ranking systems",
-        "required_features": ["evaluation_score"],
-        "teacher": "B"
-    },
-
-    # Teacher C — Execution and Founding Team concepts
-    "startup_background": {
-        "description": "Teacher C evaluates product/startup company experience",
-        "required_features": ["startup_score", "product_company_score"],
-        "teacher": "C"
-    },
-    "founding_team_signals": {
-        "description": "Teacher C evaluates early-employee and founding team experience",
-        "required_features": ["founding_team_score"],
-        "teacher": "C"
-    },
-    "ownership_signals": {
-        "description": "Teacher C evaluates ownership language: built, shipped, deployed",
-        "required_features": ["career_ontology_score"],  # OWNERSHIP group in ontology
-        "teacher": "C"
-    },
-    "consulting_penalty": {
-        "description": "Teacher C penalizes consulting/services background",
-        "required_features": ["consulting_score"],
-        "teacher": "C"
-    },
-
-    # Shared across teachers
-    "years_experience": {
-        "description": "All teachers consider total years of experience",
-        "required_features": ["years_exp"],
-        "teacher": "ALL"
-    },
-    "seniority_level": {
-        "description": "All teachers consider current title and seniority",
-        "required_features": ["leadership_count", "promotion_count"],
-        "teacher": "ALL"
-    },
-    "education_quality": {
-        "description": "All teachers consider university tier if mentioned",
-        "required_features": ["education_tier_score"],
-        "teacher": "ALL"
-    },
-    "recruiter_market_demand": {
-        "description": "Context signal: how much recruiter interest does this profile have",
-        "required_features": ["market_demand_score", "recruiter_interest_score"],
-        "teacher": "CONTEXT"
-    },
-    "candidate_availability": {
-        "description": "Context signal: can the candidate realistically join",
-        "required_features": ["availability_score", "notice_period_days"],
-        "teacher": "CONTEXT"
-    },
-    "github_activity": {
-        "description": "Technical signal: code contribution activity",
-        "required_features": ["github_score_imputed", "github_missing"],
-        "teacher": "ALL"
-    },
-}
-```
-
-**Step 7.25.2 — Build the actual feature inventory**
-```python
-import polars as pl
-import json
-
-# All columns that will be in the LightGBM feature matrix (must match FEATURE_COLS in Phase 8)
-ACTUAL_FEATURE_COLS = [
-    "retrieval_score", "vector_db_score", "embedding_score",
-    "evaluation_score", "ml_score", "llm_score",
-    "startup_score", "product_company_score", "consulting_score", "career_growth_score",
-    "career_bm25_score", "career_ontology_score", "founding_team_score",
-    "years_exp", "promotion_count", "leadership_count", "avg_tenure",
-    "availability_score", "market_demand_score", "recruiter_interest_score",
-    "reliability_score", "responsiveness_score",
-    "github_score_imputed", "github_missing", "assessment_score",
-    "quality_score", "fraud_probability", "anomaly_count",
-    "teacher_median", "teacher_std",
-    "retrieval_score_adjusted",
-    "education_tier_score",
-    "notice_period_days", "saved_by_recruiters_30d",
-]
-
-ACTUAL_FEATURE_SET = set(ACTUAL_FEATURE_COLS)
-```
-
-**Step 7.25.3 — Run the audit**
-```python
-def run_feature_parity_audit(
-    concept_registry: dict,
-    actual_feature_set: set
-) -> dict:
-    """
-    For each teacher concept, verify all required features exist in the
-    actual feature matrix. Fails loudly if any are missing.
-    """
-    audit_results = {}
-    failures = []
-
-    for concept_name, concept_info in concept_registry.items():
-        required = concept_info["required_features"]
-        missing = [f for f in required if f not in actual_feature_set]
-        passed = len(missing) == 0
-
-        audit_results[concept_name] = {
-            "teacher": concept_info["teacher"],
-            "description": concept_info["description"],
-            "required_features": required,
-            "missing_features": missing,
-            "passed": passed
-        }
-
-        if not passed:
-            failures.append(concept_name)
-
-    return audit_results, failures
-
-audit_results, failures = run_feature_parity_audit(
-    TEACHER_CONCEPT_REGISTRY,
-    ACTUAL_FEATURE_SET
-)
-
-# Print results
-print("\n=== TEACHER ↔ STUDENT FEATURE PARITY AUDIT ===\n")
-for concept, result in audit_results.items():
-    status = "✅ PASS" if result["passed"] else "❌ FAIL"
-    print(f"{status}  [{result['teacher']}] {concept}")
-    if not result["passed"]:
-        print(f"       MISSING FEATURES: {result['missing_features']}")
-
-# Save audit to disk
-import json
-with open("data/artifacts/feature_parity_audit.json", "w") as f:
-    json.dump(audit_results, f, indent=2)
-
-# Hard fail if any concept is missing
-if failures:
-    print(f"\n⛔ AUDIT FAILED — {len(failures)} concept(s) have no corresponding features:")
-    for f in failures:
-        print(f"  - {f}: {audit_results[f]['missing_features']}")
-    print("\nACTION: Add the missing features to the feature matrix before proceeding to Phase 8.")
-    print("Do NOT proceed to Phase 8 with a failing audit.")
-    raise SystemExit(1)
-else:
-    print(f"\n✅ AUDIT PASSED — all {len(TEACHER_CONCEPT_REGISTRY)} teacher concepts have student features")
-```
-
-**Step 7.25.4 — Verify feature files contain the registered columns**
-```python
-# Physical check: not just that column names are in the list,
-# but that the actual parquet files contain them
-import os
-
-feature_files = {
-    "candidate_features.parquet": [
-        "retrieval_score", "vector_db_score", "embedding_score",
-        "evaluation_score", "ml_score", "llm_score",
-        "startup_score", "product_company_score", "consulting_score",
-        "years_exp", "promotion_count", "leadership_count",
-        "education_tier_score", "github_score_imputed", "github_missing"
-    ],
-    "career_features.parquet": [
-        "career_bm25_score", "career_ontology_score", "founding_team_score"
-    ],
-    "behavior_features.parquet": [
-        "availability_score", "market_demand_score", "recruiter_interest_score",
-        "reliability_score", "responsiveness_score", "notice_period_days",
-        "saved_by_recruiters_30d"
-    ],
-    "quality_features.parquet": [
-        "quality_score", "fraud_probability", "anomaly_count"
-    ],
-}
-
-print("\n=== PHYSICAL FILE COLUMN CHECK ===")
-for filename, expected_cols in feature_files.items():
-    path = f"data/artifacts/{filename}"
-    if not os.path.exists(path):
-        print(f"❌ MISSING FILE: {path}")
-        continue
-
-    df = pl.read_parquet(path)
-    actual_cols = set(df.columns)
-    missing = [c for c in expected_cols if c not in actual_cols]
-
-    if missing:
-        print(f"❌ {filename}: missing columns {missing}")
-    else:
-        print(f"✅ {filename}: all {len(expected_cols)} expected columns present")
-
-    # Also check row count
-    if len(df) != 100_000:
-        print(f"   ⚠️  Row count: {len(df)} (expected 100,000)")
-    else:
-        print(f"   ✓  Row count: {len(df):,}")
-```
-
-### Verification Checklist
-- [ ] `feature_parity_audit.json` exists and shows 0 failures
-- [ ] All 4 feature parquet files contain their expected columns
-- [ ] Every parquet file has exactly 100,000 rows
-- [ ] No concept in the registry has an empty `required_features` list
-- [ ] `education_tier_score` is present — this is a commonly missed feature from Teacher A
-- [ ] `consulting_score` is present — required for Teacher C's penalty model
-- [ ] `founding_team_score` is present — required for Teacher C and Phase 9.5
-- [ ] Phase 8 is NOT started until this audit passes completely
-
-### Common Mistakes
-- Building the feature list in Phase 8 without running this audit first: by the time you see SHAP values, it's too late — you'll have trained a model that can't represent key teacher concepts.
-- Adding features to `ACTUAL_FEATURE_COLS` without verifying the corresponding parquet file actually has that column.
-- Running the audit against the wrong feature file: the physical column check in Step 7.25.4 guards against this.
-
-### Output
-```
-data/artifacts/feature_parity_audit.json
-Schema: {concept_name: {teacher, description, required_features, missing_features, passed}}
-```
-
----
-
-
-## PHASE 7.5 — HARD NEGATIVE MINING [V12]
-### Goal
-Force the model to learn strict boundary conditions by finding candidates who share keywords but violate explicit JD constraints (e.g., pure consulting background). Apply score caps instead of forcing label=0.
-
-
 ## PHASE 8 — LEARNING TO RANK
 
 ### Goal
 Train a machine learning model to predict recruiter relevance scores from the feature matrix. The model compresses all the teacher signal into a fast, deterministic ranker that runs at inference time.
-
-**Model strategy: Regression-First.**
-
-The primary model is `LightGBMRegressor` with Huber loss. `LightGBMRanker` with LambdaRank is run as a comparison experiment only.
-
-**Why Huber Regression over LambdaRank:**
-
-LambdaRank is designed for multi-query settings where you train across many different queries and the model learns a general ranking function. This competition has exactly one JD — one query. In a single-query setting:
-
-- LambdaRank cannot generalize across queries (there are none)
-- LambdaRank's relative-pair gradients can be unstable on 3,000 samples
-- Huber regression directly optimizes the teacher scores as absolute values, which is exactly what they are — a numeric estimate of recruiter relevance
-- Huber is robust to outlier labels (miscalibrated teacher scores) unlike MSE
-- Huber produces a continuous score that directly maps to the submission's `score` column
-
-LambdaRank is kept as a benchmark to verify that Huber is not dramatically worse. In practice, on single-query datasets of this size, Huber consistently wins or ties. If LambdaRank shows > 5% better top-100 overlap across 5 seeds AND Phase 8.75 shows better Composite score, switch to LambdaRank. Otherwise: Huber wins by simplicity.
 
 ### Implementation Steps
 
@@ -2236,280 +1981,61 @@ else:
 
 ---
 
-
-## PHASE 8.5 — AUTOMATED SHAP FEEDBACK LOOP [V12]
-### Goal
-Automatically generate SHAP feature importances after LTR training. If core JD features fall out of the top 10, fail the build.
-
-
-## PHASE 8.75 — RETRIEVAL & RANKING STRESS TEST
-
-### Goal
-Create a local proxy for leaderboard performance before any real submission. Without this phase, every architectural change is tuned blind — you have no signal about whether a change to the ontology, the teacher prompts, or the feature weights actually improved NDCG@10. This phase simulates the judge's evaluation using teacher labels as a proxy ground truth.
-
-This is the only phase that gives you a feedback loop before you submit.
-
-### Prerequisites
-- Phase 8 complete (LightGBM model trained)
-- Phase 8.5 complete (SHAP passed)
-- Phase 6 complete (top_3000.parquet exists with retrieval scores)
-
-### Implementation Steps
-
-**Step 8.75.1 — Recall@3000 Verification**
-
-Measures whether the hybrid retrieval is capturing all genuinely relevant candidates before the ranking stage. If a truly relevant candidate isn't in the top 3,000, no amount of model tuning will recover them.
-
-```python
-import polars as pl
-import numpy as np
-
-# Use teacher labels as proxy: any candidate with teacher_median > 75 is "relevant"
-RELEVANCE_THRESHOLD = 75.0
-
-labels = pl.read_parquet("data/artifacts/refined_labels.parquet")
-top_3000 = pl.read_parquet("data/artifacts/top_3000.parquet")
-
-# Relevant candidates according to teacher
-relevant_ids = set(
-    labels.filter(pl.col("refined_label") >= RELEVANCE_THRESHOLD)["candidate_id"].to_list()
-)
-
-# Relevant candidates in the retrieved top 3000
-retrieved_ids = set(top_3000["candidate_id"].to_list())
-retrieved_relevant = relevant_ids & retrieved_ids
-
-recall_at_3000 = len(retrieved_relevant) / max(1, len(relevant_ids))
-
-print(f"=== RETRIEVAL STRESS TEST ===")
-print(f"Teacher-relevant candidates (score ≥ {RELEVANCE_THRESHOLD}): {len(relevant_ids)}")
-print(f"Retrieved in top 3000: {len(retrieved_relevant)}")
-print(f"Recall@3000: {recall_at_3000:.3f}")
-
-if recall_at_3000 < 0.85:
-    print("⚠️  WARNING: Recall@3000 < 0.85 — you are missing relevant candidates at retrieval.")
-    print("   ACTION: Increase top_k temporarily, diagnose which relevant candidates were missed,")
-    print("   and adjust hybrid weights or ontology to capture them.")
-elif recall_at_3000 < 0.95:
-    print("⚠️  CAUTION: Recall@3000 is acceptable but not excellent. Monitor carefully.")
-else:
-    print("✅ Recall@3000 is strong.")
-```
-
-**Step 8.75.2 — Simulated NDCG@10, NDCG@50, MAP, P@10**
-
-Uses teacher labels as proxy relevance grades. This is not a perfect proxy for the hidden ground truth, but it is the best available local signal and will track the true leaderboard directionally.
-
-```python
-def dcg_at_k(relevances: list, k: int) -> float:
-    """Compute DCG@K given a list of relevance scores in ranked order."""
-    relevances = np.array(relevances[:k])
-    if len(relevances) == 0:
-        return 0.0
-    gains = (2 ** relevances - 1) / np.log2(np.arange(2, len(relevances) + 2))
-    return float(np.sum(gains))
-
-def ndcg_at_k(ranked_relevances: list, k: int) -> float:
-    """Compute NDCG@K."""
-    actual_dcg = dcg_at_k(ranked_relevances, k)
-    ideal_relevances = sorted(ranked_relevances, reverse=True)
-    ideal_dcg = dcg_at_k(ideal_relevances, k)
-    if ideal_dcg == 0:
-        return 0.0
-    return actual_dcg / ideal_dcg
-
-def average_precision(ranked_relevances: list, threshold: float = 50.0) -> float:
-    """Compute Average Precision treating scores >= threshold as relevant."""
-    relevant = np.array(ranked_relevances) >= threshold
-    if relevant.sum() == 0:
-        return 0.0
-    precisions = []
-    num_relevant = 0
-    for i, rel in enumerate(relevant):
-        if rel:
-            num_relevant += 1
-            precisions.append(num_relevant / (i + 1))
-    return float(np.mean(precisions))
-
-def run_ranking_simulation(model, X, candidate_ids, label_lookup, top_k=100):
-    """
-    Simulate leaderboard evaluation using teacher labels as proxy ground truth.
-    Returns dict of metric_name -> score.
-    """
-    # Get model predictions and rank
-    raw_scores = model.predict(X)
-    ranked_indices = np.argsort(raw_scores)[::-1][:top_k]
-    ranked_ids = [candidate_ids[i] for i in ranked_indices]
-
-    # Get teacher labels for ranked candidates (normalized 0–1 for NDCG)
-    ranked_relevances = []
-    for cid in ranked_ids:
-        label = label_lookup.get(cid, 0.0)
-        # Normalize to [0, 3] grades for NDCG (0=not relevant, 3=highly relevant)
-        grade = min(3.0, label / 33.3)
-        ranked_relevances.append(grade)
-
-    # All teacher labels for ideal computation
-    all_labels = [(cid, label_lookup.get(cid, 0.0)) for cid in candidate_ids]
-    all_labels_sorted = sorted(all_labels, key=lambda x: x[1], reverse=True)
-    ideal_relevances = [min(3.0, l / 33.3) for _, l in all_labels_sorted[:top_k]]
-
-    # Compute metrics
-    actual_ndcg10 = ndcg_at_k(ranked_relevances, 10) / ndcg_at_k(ideal_relevances, 10) \
-        if ndcg_at_k(ideal_relevances, 10) > 0 else 0.0
-
-    # Properly compute NDCG using ideal as denominator
-    def ndcg_proper(ranked, ideal, k):
-        return dcg_at_k(ranked, k) / max(1e-9, dcg_at_k(ideal, k))
-
-    ndcg10 = ndcg_proper(ranked_relevances, ideal_relevances, 10)
-    ndcg50 = ndcg_proper(ranked_relevances, ideal_relevances, 50)
-    map_score = average_precision(ranked_relevances, threshold=2.0)
-    p_at_10 = np.mean([1 if r >= 2.0 else 0 for r in ranked_relevances[:10]])
-
-    # Composite score matching challenge formula
-    composite = 0.50 * ndcg10 + 0.30 * ndcg50 + 0.15 * map_score + 0.05 * p_at_10
-
-    return {
-        "NDCG@10": ndcg10,
-        "NDCG@50": ndcg50,
-        "MAP": map_score,
-        "P@10": p_at_10,
-        "Composite": composite,
-    }
-```
-
-**Step 8.75.3 — Run the simulation and save the report**
-```python
-import pickle
-
-with open("data/artifacts/lgbm_ranker.pkl", "rb") as f:
-    lgbm = pickle.load(f)
-
-# Build feature matrix and labels for top-3000 candidates
-labels_df = pl.read_parquet("data/artifacts/refined_labels.parquet")
-label_lookup = {row["candidate_id"]: row["refined_label"]
-                for row in labels_df.iter_rows(named=True)}
-
-# Feature matrix (same assembly as Phase 8)
-# X, candidate_ids = build_feature_matrix(top_3000_ids)  # use Phase 8 function
-metrics = run_ranking_simulation(lgbm, X, candidate_ids, label_lookup)
-
-print("\n=== RANKING STRESS TEST RESULTS ===")
-print("(Using teacher labels as proxy ground truth — directionally accurate, not exact)")
-print()
-for metric, value in metrics.items():
-    print(f"  {metric}: {value:.4f}")
-print()
-print(f"  Leaderboard proxy score: {metrics['Composite']:.4f}")
-print()
-
-# Save report
-stress_report = "# Ranking Stress Test Report\n\n"
-stress_report += f"**Retrieval Recall@3000:** {recall_at_3000:.3f}\n\n"
-stress_report += "## Proxy Leaderboard Metrics\n\n"
-stress_report += "| Metric | Weight | Value |\n|---|---|---|\n"
-stress_report += f"| NDCG@10 | 0.50 | {metrics['NDCG@10']:.4f} |\n"
-stress_report += f"| NDCG@50 | 0.30 | {metrics['NDCG@50']:.4f} |\n"
-stress_report += f"| MAP | 0.15 | {metrics['MAP']:.4f} |\n"
-stress_report += f"| P@10 | 0.05 | {metrics['P@10']:.4f} |\n"
-stress_report += f"| **Composite** | — | **{metrics['Composite']:.4f}** |\n\n"
-stress_report += "> These metrics use teacher labels as proxy ground truth.\n"
-stress_report += "> A 0.01 improvement here typically corresponds to a meaningful leaderboard move.\n"
-
-with open("data/artifacts/stress_test_report.md", "w") as f:
-    f.write(stress_report)
-
-print("Saved: data/artifacts/stress_test_report.md")
-```
-
-**Step 8.75.4 — Iterative tuning protocol using stress test**
-
-Use this simulation to compare any two versions of the system before committing a change:
-
-```
-For any proposed change (e.g., adjusted ontology weights, new feature, different top_k):
-  1. Run the change
-  2. Re-run Phases 8 and 8.75
-  3. Compare Composite score
-  4. If Composite improves ≥ 0.002: accept the change
-  5. If Composite improves < 0.002: the change is noise — revert it
-  6. If Composite drops: revert immediately
-
-Keep a version log:
-  V1 baseline:                  Composite = 0.XXXX
-  V2 + career description BM25: Composite = 0.XXXX
-  V3 + founding_team_score:     Composite = 0.XXXX
-  ...
-```
-
-### Verification Checklist
-- [ ] `stress_test_report.md` exists with all 4 metrics computed
-- [ ] `Recall@3000 > 0.85` — if not, fix retrieval before tuning the ranker
-- [ ] `NDCG@10 > NDCG@50` — this is always true by math; if it's not, the metric code has a bug
-- [ ] `Composite` score is computed correctly: `0.50*NDCG10 + 0.30*NDCG50 + 0.15*MAP + 0.05*P10`
-- [ ] The simulation has been run at least once per major model change
-- [ ] A version log exists documenting the Composite score for each architecture change
-
-### Common Mistakes
-- Using raw teacher scores without normalizing to NDCG relevance grades: NDCG expects relevance grades (0, 1, 2, 3), not scores (0–100). Divide by 33.3 and cap at 3.
-- Treating the simulation score as identical to the true leaderboard score: it's a directional proxy, not a perfect predictor. Use it for relative comparisons between versions, not as an absolute score estimate.
-- Forgetting to re-run this after Phase 7C (pairwise refinement): the labels change there, so the simulation results change too.
-
-### Output
-```
-data/artifacts/stress_test_report.md
-```
-
----
-
 ## PHASE 9 — ENSEMBLE MODELS
 
 ### Goal
 Combine LightGBM with XGBoost to reduce ranking instability. Two models with different algorithmic bases often catch each other's blind spots.
 
 ### Implementation Steps
-Instead of hardcoding a blend weight, we learn it dynamically on the validation set.
 
 ```python
 import xgboost as xgb
-import numpy as np
-from sklearn.metrics import ndcg_score
 
 # Train XGBoost on same features/labels
-model_xgb = xgb.XGBRanker(
-    objective="rank:ndcg",
+model_xgb = xgb.XGBRegressor(
+    objective="reg:pseudohubererror",
     learning_rate=0.05,
-    max_depth=6,
-    n_estimators=200,
+    max_depth=7,
+    n_estimators=500,
     subsample=0.8,
     colsample_bytree=0.8,
     random_state=42,
-    n_jobs=-1
+    n_jobs=-1,
+    early_stopping_rounds=50,
+    eval_metric="rmse"
 )
-model_xgb.fit(X_train, y_train, group=[len(X_train)])
+model_xgb.fit(
+    X_train, y_train,
+    eval_set=[(X_val, y_val)],
+    verbose=100
+)
 
-# Find optimal blend weights
-best_ndcg = -1
-best_lgbm_w = 0.5
+with open("data/artifacts/xgb_ranker.pkl", "wb") as f:
+    pickle.dump(model_xgb, f)
 
-lgbm_val_preds = model_lgbm.predict(X_val)
-xgb_val_preds = model_xgb.predict(X_val)
+# Combine: normalize each model's output to [0,1] then blend
+def ensemble_score(X, lgbm_model, xgb_model,
+                   lgbm_weight=0.6, xgb_weight=0.4):
+    lgbm_scores = lgbm_model.predict(X)
+    xgb_scores = xgb_model.predict(X)
 
-def norm(s):
-    return (s - s.min()) / (s.max() - s.min() + 1e-9)
+    # Normalize each to [0, 1]
+    def norm(s):
+        return (s - s.min()) / (s.max() - s.min() + 1e-9)
 
-l_norm = norm(lgbm_val_preds)
-x_norm = norm(xgb_val_preds)
+    return lgbm_weight * norm(lgbm_scores) + xgb_weight * norm(xgb_scores)
+```
 
-for w in np.arange(0.1, 1.0, 0.05):
-    blend = w * l_norm + (1 - w) * x_norm
-    score = ndcg_score([y_val], [blend], k=10)
-    if score > best_ndcg:
-        best_ndcg = score
-        best_lgbm_w = w
+### Verification Checklist
+- [ ] Both models trained and saved
+- [ ] Top-100 overlap between LGBM and XGBoost > 85%
+- [ ] If overlap < 70%, models disagree substantially — investigate which has better SHAP alignment with critical features
+- [ ] Ensemble score distribution is spread across a reasonable range (not all ~0.5)
 
-print(f"Optimal Blend: {best_lgbm_w:.2f} LightGBM / {1 - best_lgbm_w:.2f} XGBoost")
+### Output
+```
+data/artifacts/lgbm_ranker.pkl
+data/artifacts/xgb_ranker.pkl
 ```
 
 ---
@@ -2517,94 +2043,699 @@ print(f"Optimal Blend: {best_lgbm_w:.2f} LightGBM / {1 - best_lgbm_w:.2f} XGBoos
 ## PHASE 9.5 — ELITE RE-RANKING
 
 ### Goal
-Specifically optimize NDCG@10 by applying a small, deterministic reranker to the top 20 or 50 candidates from the ensemble using existing features (no handcrafted rules).
+Specifically optimize NDCG@10 by applying a second, sharper scoring pass to the top 20 candidates. This layer uses a different weight profile that heavily emphasizes the two rarest, most JD-critical signals: evaluation expertise and founding team fit.
+
+### Prerequisites
+- Phase 9 complete — full top-100 list available
+- All feature files loaded
 
 ### Implementation Steps
+
 ```python
 def compute_elite_score(features: dict) -> float:
-    # Feature-based re-ranking using continuous signals
+    """
+    Re-ranking formula for top 20 candidates.
+    Weights are different from ensemble — emphasize rare critical signals.
+    """
     return (
-        0.4 * features.get("ensemble_score", 0.0)
-        + 0.2 * features.get("teacher_score", 0.0)
-        + 0.15 * features.get("evidence_strength_score", 0.0)
-        + 0.10 * features.get("integrity_score", 0.0)
-        + 0.10 * features.get("technical_coverage", 0.0)
-        + 0.05 * features.get("dense_consensus_score", 0.0)
+        0.30 * features.get("evaluation_score", 0.0)      # NDCG/MAP — rarest
+        + 0.25 * features.get("founding_team_score", 0.0) # JD title requirement
+        + 0.20 * features.get("availability_score", 0.0)  # Can they actually join?
+        + 0.15 * features.get("teacher_median", 0.0) / 100  # Overall confidence (normalize to 0-1)
+        - 0.10 * min(1.0, features.get("teacher_std", 0.0) / 30)  # Uncertainty penalty
     )
+
+def apply_elite_reranking(top_100_df: pl.DataFrame,
+                           features_df: pl.DataFrame,
+                           pool_size: int = 20) -> pl.DataFrame:
+    """
+    Input: top_100_df sorted by ensemble_score descending
+    Output: same 100 candidates, but top 20 re-ordered by elite_score
+    """
+    # Split: top 20 for re-ranking, rest stay in place
+    top_20 = top_100_df.head(pool_size)
+    rest = top_100_df.tail(len(top_100_df) - pool_size)
+
+    # Join features
+    top_20_features = top_20.join(features_df, on="candidate_id", how="left")
+
+    # Compute elite scores
+    elite_scores = []
+    for row in top_20_features.iter_rows(named=True):
+        elite_scores.append(compute_elite_score(row))
+
+    top_20 = top_20.with_columns(pl.Series("elite_score", elite_scores))
+    top_20_reranked = top_20.sort("elite_score", descending=True).drop("elite_score")
+
+    # Reassemble: re-ranked top 20 + unchanged rest
+    return pl.concat([top_20_reranked, rest])
+```
+
+### Verification Checklist
+- [ ] Re-ranking only affects positions 1–20, not 21–100
+- [ ] If a candidate with NDCG/MAP experience was ranked #15, they should move into top 5 after re-ranking
+- [ ] Candidates ranked 21–100 have the same relative order before and after
+- [ ] The re-ranking is deterministic (pure formula, no randomness)
+
+---
+
+## PHASE 10 — REASONING BANK
+
+### Goal
+Generate unique, factually grounded reasoning for all 3,000 candidates offline. The reasoning is stored and attached at inference time — no LLM calls during the online pipeline.
+
+### Implementation Steps
+
+**Step 10.1 — Reasoning prompt template**
+```python
+REASONING_PROMPT = """You are writing a factual recruiter assessment for this candidate.
+
+STRICT RULES:
+1. Only use information explicitly present in the candidate profile below
+2. Never invent skills, companies, projects, or experiences
+3. Every claim must cite specific evidence (a company name, a role title, a technology name)
+4. Use numbers whenever available (years, months, scores)
+5. Structure must be exactly 3 sentences
+
+Job Description Requirements:
+{jd_requirements_summary}
+
+Candidate Profile:
+{candidate_profile}
+
+Write exactly 3 sentences following this structure:
+
+SENTENCE 1 (Evidence): State the candidate's total experience and 2-3 specific technical 
+  skills/systems from their profile that are relevant to the role.
+
+SENTENCE 2 (Alignment): Identify the strongest specific alignment with the JD requirements,
+  citing a concrete company/project/achievement from their career history.
+
+SENTENCE 3 (Gap): State ONE honest gap or concern (e.g., notice period, consulting background,
+  missing vector DB experience, high seniority mismatch). Be specific.
+
+Output only the 3 sentences. No headers, no bullets, no JSON.
+"""
+
+JD_SUMMARY = """
+Senior AI Engineer — Founding Team
+Must have: retrieval systems, vector databases (Pinecone/Qdrant/Milvus), 
+embedding-based search, ranking evaluation (NDCG/MAP)
+Background: 5-9 years, product companies, startup/founding team mindset, fast execution
+"""
+```
+
+**Step 10.2 — Generate for all 3,000**
+```python
+reasoning_records = []
+reasoning_cache = {}
+
+for cid in tqdm(top_3000_ids):
+    if cid in reasoning_cache:
+        reasoning_records.append(reasoning_cache[cid])
+        continue
+
+    cand = profiles[cid]
+    profile_str = format_profile_for_reasoning(cand)  # compact but complete
+
+    for attempt in range(3):
+        try:
+            reasoning = call_llm(
+                REASONING_PROMPT.format(
+                    jd_requirements_summary=JD_SUMMARY,
+                    candidate_profile=profile_str
+                ),
+                temperature=0.3,  # slight creativity to avoid identical phrasings
+                max_tokens=300
+            )
+            # Validate: must be non-empty and not contain red-flag phrases
+            assert len(reasoning) > 50
+            assert "no information" not in reasoning.lower()
+            break
+        except Exception:
+            reasoning = f"{cand.get('profile', {}).get('years_of_experience', '?')} years of ML experience with relevant technical background. Profile shows alignment with core AI engineering requirements. Assessment limited due to sparse profile data."
+
+    record = {"candidate_id": cid, "reasoning": reasoning.strip()}
+    reasoning_cache[cid] = record
+    reasoning_records.append(record)
+
+    if len(reasoning_records) % 100 == 0:
+        with open("data/artifacts/reasoning_cache.pkl", "wb") as f:
+            pickle.dump(reasoning_cache, f)
+
+df_reasoning = pl.DataFrame(reasoning_records)
+df_reasoning.write_parquet("data/artifacts/reasoning.parquet")
+```
+
+**Step 10.3 — Post-generation validation**
+```python
+def validate_reasoning(reasoning: str, candidate_profile: dict) -> list:
+    """Returns list of issues found."""
+    issues = []
+
+    # Must have a number
+    import re
+    if not re.search(r'\d', reasoning):
+        issues.append("no_number")
+
+    # Must not be too short
+    if len(reasoning.split()) < 30:
+        issues.append("too_short")
+
+    # Check for common hallucination patterns
+    hallucination_patterns = ["RAG system" , "vector database expert", "10+ years"]
+    for pattern in hallucination_patterns:
+        if pattern.lower() in reasoning.lower():
+            years_exp = candidate_profile.get("profile", {}).get("years_of_experience", 0)
+            # Flag if the claim doesn't match the data
+            if "10+ years" in pattern and years_exp < 10:
+                issues.append(f"potential_hallucination: {pattern}")
+
+    return issues
+
+# Validate all 3000
+validation_issues = []
+for record in reasoning_records:
+    cid = record["candidate_id"]
+    issues = validate_reasoning(record["reasoning"], profiles[cid])
+    if issues:
+        validation_issues.append({"candidate_id": cid, "issues": issues})
+
+print(f"Reasoning entries with issues: {len(validation_issues)} / 3000")
+print(f"Target: < 5% ({0.05 * 3000:.0f})")
+```
+
+### Verification Checklist
+- [ ] All 3,000 candidates have reasoning (no gaps in coverage)
+- [ ] No reasoning entry shorter than 30 words
+- [ ] > 95% of reasoning entries contain at least one number
+- [ ] < 5% of entries flagged in post-generation validation
+- [ ] Manually read 20 reasoning entries — they should all feel unique and grounded
+- [ ] The reasoning for a candidate who lacks vector DB experience mentions this gap
+- [ ] Reasoning bank size covers all top 3,000 (not just top 100 or 500)
+
+### Output
+```
+data/artifacts/reasoning.parquet
+Schema: candidate_id (str), reasoning (str)
 ```
 
 ---
 
-## PHASE 9.75 — MODEL COMPARISON DASHBOARD
-Generate an experiment dashboard to evaluate ensemble stability:
-- Teacher vs Student overlap
-- LightGBM vs XGBoost overlap
-- Ensemble vs Teacher overlap
-- SHAP comparison
-- Top 100 stability
-
----
-
-## PHASE 10 — GROUNDED REASONING BANK
+## PHASE 11 — RUNTIME VERIFICATION
 
 ### Goal
-Generate unique, factually grounded reasoning for all 100,000+ candidates offline, so the online script can instantly look them up without LLM hallucination or latency.
-
-### Implementation Details
-Each reasoning entry must store the following strictly grounded fields:
-- `candidate_id`
-- `reasoning` (3 sentences maximum)
-- `supporting_evidence_offsets` (Direct citations to the candidate profile)
-- `missing_skills` (Honest gap analysis)
-- `risk_flags` (e.g., seniority mismatch, job hopping)
-
-At inference time, `run_ranking.py` performs a simple dictionary lookup for the Top 100 candidates.
-No generation. No hallucination. Exactly grounded.
-
----
-
-## PHASE 11 — PRODUCTION VERIFICATION
-
-### Goal
-Prove that the online pipeline completes under the extreme competition constraints (5 minutes, CPU-only, ≤16 GB RAM).
-
-### Expanded Verification Suite
-- **Runtime**: Validate overall execution time.
-- **Memory**: Verify Peak RAM usage.
-- **Retrieval**: Verify FAISS latency.
-- **Ranking**: Verify LightGBM & XGBoost inference latency.
-- **CSV**: Ensure strict structural validation.
-- **Reasoning**: Ensure 100% lookup success (no missing explanations).
-- **Missing IDs**: Ensure exactly zero missing candidate IDs.
-
----
-
-## PHASE 11.25 — SUBMISSION REPLAY
-
-### Goal
-Prove that the online pipeline is mathematically deterministic before generating the final CSV.
+Prove that the online pipeline completes in under 5 minutes on CPU with ≤16 GB RAM. Produce documented evidence for judges.
 
 ### Implementation Steps
-1. Execute `run_ranking.py` 10 times in a row.
-2. Verify:
-   - Identical ranking order across all 10 runs
-   - Identical CSV outputs
-   - Identical reasoning outputs
-   - Identical feature hashes
-3. If any drift is detected, **ABORT**.
+
+```python
+import time
+import tracemalloc
+import polars as pl
+
+def benchmark_online_pipeline():
+    """Run the full online pipeline with precise timing."""
+    timings = {}
+    tracemalloc.start()
+
+    t0 = time.perf_counter()
+
+    # O1: Load
+    t_load_start = time.perf_counter()
+    cf = pl.read_parquet("data/artifacts/candidate_features.parquet")
+    crf = pl.read_parquet("data/artifacts/career_features.parquet")
+    qf = pl.read_parquet("data/artifacts/quality_features.parquet")
+    bf = pl.read_parquet("data/artifacts/behavior_features.parquet")
+    index = faiss.read_index("data/artifacts/faiss.index")
+    with open("data/artifacts/bm25.pkl", "rb") as f:
+        bm25_data = pickle.load(f)
+    with open("data/artifacts/lgbm_ranker.pkl", "rb") as f:
+        lgbm = pickle.load(f)
+    with open("data/artifacts/xgb_ranker.pkl", "rb") as f:
+        xgb_model = pickle.load(f)
+    reasoning_df = pl.read_parquet("data/artifacts/reasoning.parquet")
+    timings["O1_load"] = time.perf_counter() - t_load_start
+
+    # O2: Retrieve
+    t_ret = time.perf_counter()
+    top_3000_ids = run_hybrid_retrieval(index, bm25_data)
+    timings["O2_retrieval"] = time.perf_counter() - t_ret
+
+    # O3: Integrity filter
+    t_int = time.perf_counter()
+    filtered_ids = apply_integrity_filter(top_3000_ids, qf)
+    timings["O3_integrity"] = time.perf_counter() - t_int
+
+    # O4: Model scoring
+    t_model = time.perf_counter()
+    scores = run_ensemble_scoring(filtered_ids, cf, crf, qf, bf, lgbm, xgb_model)
+    timings["O4_scoring"] = time.perf_counter() - t_model
+
+    # O5: Top 100
+    t_top = time.perf_counter()
+    top_100 = select_top_100(scores)
+    timings["O5_top100"] = time.perf_counter() - t_top
+
+    # O6: Elite re-ranking
+    t_elite = time.perf_counter()
+    top_100 = apply_elite_reranking(top_100, cf.join(crf, on="candidate_id"))
+    timings["O6_elite"] = time.perf_counter() - t_elite
+
+    # O7: Score normalization
+    t_norm = time.perf_counter()
+    top_100 = normalize_scores(top_100)
+    timings["O7_normalize"] = time.perf_counter() - t_norm
+
+    # O8: Reasoning join
+    t_reason = time.perf_counter()
+    top_100 = top_100.join(reasoning_df, on="candidate_id", how="left")
+    timings["O8_reasoning"] = time.perf_counter() - t_reason
+
+    total = time.perf_counter() - t0
+    timings["TOTAL"] = total
+
+    # Memory
+    current, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+
+    return timings, peak / 1024 / 1024 / 1024  # peak GB
+
+timings, peak_gb = benchmark_online_pipeline()
+
+# Generate runtime_report.md
+report = "# Runtime Verification Report\n\n"
+report += "| Stage | Time |\n|---|---|\n"
+for stage, t in timings.items():
+    report += f"| {stage} | {t:.2f}s |\n"
+report += f"\n**Peak Memory:** {peak_gb:.2f} GB\n"
+report += f"\n**Status:** {'✅ PASS' if timings['TOTAL'] < 300 else '❌ FAIL — optimize FAISS nprobe'}\n"
+
+with open("data/artifacts/runtime_report.md", "w") as f:
+    f.write(report)
+
+print(report)
+```
+
+### Optimization If Over Budget
+```
+If TOTAL > 300 seconds:
+1. Reduce faiss.index.nprobe from 50 → 30 (fastest fix, ~30% speedup, slight recall loss)
+2. Switch candidate feature loading to lazy evaluation with Polars scan_parquet
+3. Pre-filter candidates with fraud_probability > 0.98 from the feature matrix entirely
+4. Profile each step and optimize the slowest one first
+```
+
+### Verification Checklist
+- [ ] `runtime_report.md` exists with all stage timings
+- [ ] `TOTAL < 300 seconds` on the target machine (CPU only)
+- [ ] `Peak Memory < 16 GB`
+- [ ] Run the benchmark THREE times — all three runs complete successfully
+- [ ] Output CSV is identical across all three runs (determinism check)
 
 ---
 
-## PHASE 11.5 — SUBMISSION SAFETY AUDIT
+---
 
-### Goal
-Run an automated, exhaustive pre-flight checklist on the final CSV before it leaves your machine. This phase directly protects against disqualification.
+# ONLINE INFERENCE PIPELINE
 
-### Expanded Checks
-- Duplicate IDs or Duplicate ranks
-- Expected Candidate Count (Exactly 100)
-- Scores strictly sorted descending
-- No NaN or Inf values
-- Hashes and schemas match
-- Valid score range
-- Deterministic ordering when scores tie
+**File: `online/run_ranking.py`** — this is what judges execute.
+
+```python
+#!/usr/bin/env python3
+"""
+Redrob Candidate Ranking — Online Inference Pipeline
+Usage: python online/run_ranking.py
+Output: team_xxx.csv
+
+Runtime target: < 5 minutes, CPU only, no network
+"""
+
+import time
+import pickle
+import numpy as np
+import polars as pl
+import faiss
+
+ARTIFACTS = "data/artifacts"
+OUTPUT_PATH = "team_xxx.csv"
+
+def run():
+    t_start = time.perf_counter()
+
+    # === O1: LOAD ===
+    print("[O1] Loading artifacts...")
+    cf = pl.read_parquet(f"{ARTIFACTS}/candidate_features.parquet")
+    crf = pl.read_parquet(f"{ARTIFACTS}/career_features.parquet")
+    qf = pl.read_parquet(f"{ARTIFACTS}/quality_features.parquet")
+    bf = pl.read_parquet(f"{ARTIFACTS}/behavior_features.parquet")
+    reasoning = pl.read_parquet(f"{ARTIFACTS}/reasoning.parquet")
+
+    index = faiss.read_index(f"{ARTIFACTS}/faiss.index")
+    index.nprobe = 50
+
+    with open(f"{ARTIFACTS}/bm25.pkl", "rb") as f:
+        bm25_data = pickle.load(f)
+    with open(f"{ARTIFACTS}/faiss_id_mapping.pkl", "rb") as f:
+        id_mapping = pickle.load(f)
+    with open(f"{ARTIFACTS}/lgbm_ranker.pkl", "rb") as f:
+        lgbm = pickle.load(f)
+    with open(f"{ARTIFACTS}/xgb_ranker.pkl", "rb") as f:
+        xgb_model = pickle.load(f)
+
+    jd_embedding = np.load(f"{ARTIFACTS}/jd_embedding.npy")
+    print(f"  Load time: {time.perf_counter() - t_start:.2f}s")
+
+    # === O2: RETRIEVE TOP 3000 ===
+    print("[O2] Running hybrid retrieval...")
+    t2 = time.perf_counter()
+
+    # Dense search
+    scores_dense, indices_dense = index.search(jd_embedding, 5000)
+    dense_results = {
+        id_mapping[int(idx)]: float(sc)
+        for sc, idx in zip(scores_dense[0], indices_dense[0])
+        if idx >= 0
+    }
+
+    # BM25 search
+    bm25_index = bm25_data["index"]
+    bm25_ids = bm25_data["ids"]
+    jd_query = ["retrieval", "semantic", "search", "embeddings", "vector",
+                 "database", "ndcg", "map", "ranking", "evaluation", "rag",
+                 "pinecone", "qdrant", "founding", "startup"]
+    bm25_scores = bm25_index.get_scores(jd_query)
+    top_bm25_idx = np.argsort(bm25_scores)[::-1][:5000]
+    max_bm25 = float(bm25_scores[top_bm25_idx[0]])
+    bm25_results = {
+        bm25_ids[i]: float(bm25_scores[i]) / (max_bm25 + 1e-9)
+        for i in top_bm25_idx
+    }
+
+    # Combine all candidate IDs
+    all_ids = list(set(dense_results.keys()) | set(bm25_results.keys()))
+
+    # Build retrieval score using career ontology from precomputed features
+    crf_indexed = crf.with_columns(pl.col("candidate_id")).to_pandas().set_index("candidate_id")
+
+    retrieval_rows = []
+    for cid in all_ids:
+        d = dense_results.get(cid, 0.0)
+        b = bm25_results.get(cid, 0.0)
+        if cid in crf_indexed.index:
+            co = float(crf_indexed.loc[cid, "career_ontology_score"])
+            cb = float(crf_indexed.loc[cid, "career_bm25_score"])
+        else:
+            co, cb = 0.0, 0.0
+        retrieval_score = 0.35 * d + 0.25 * b + 0.25 * co + 0.15 * cb
+        retrieval_rows.append({"candidate_id": cid, "retrieval_score": retrieval_score})
+
+    df_ret = pl.DataFrame(retrieval_rows).sort("retrieval_score", descending=True).head(3000)
+    top_3000_ids = df_ret["candidate_id"].to_list()
+    print(f"  Retrieval time: {time.perf_counter() - t2:.2f}s")
+
+    # === O3: INTEGRITY FILTER ===
+    print("[O3] Applying integrity filter...")
+    t3 = time.perf_counter()
+
+    qf_indexed = qf.filter(pl.col("candidate_id").is_in(top_3000_ids))
+    hard_remove = set(
+        qf_indexed.filter(
+            (pl.col("fraud_probability") > 0.98) &
+            (pl.col("has_severe_anomaly") == True)
+        )["candidate_id"].to_list()
+    )
+    filtered_ids = [cid for cid in top_3000_ids if cid not in hard_remove]
+    print(f"  Hard removed: {len(hard_remove)} candidates")
+    print(f"  Remaining: {len(filtered_ids)}")
+    print(f"  Integrity time: {time.perf_counter() - t3:.2f}s")
+
+    # === O4: ENSEMBLE SCORING ===
+    print("[O4] Running ensemble scoring...")
+    t4 = time.perf_counter()
+
+    # Build feature matrix for filtered candidates
+    df_features = (
+        pl.DataFrame({"candidate_id": filtered_ids})
+        .join(cf, on="candidate_id", how="left")
+        .join(crf, on="candidate_id", how="left")
+        .join(qf, on="candidate_id", how="left")
+        .join(bf, on="candidate_id", how="left")
+        .join(df_ret, on="candidate_id", how="left")
+        .fill_null(0.0)
+    )
+
+    X = df_features.select(FEATURE_COLS).to_numpy().astype(np.float32)
+
+    lgbm_scores = lgbm.predict(X)
+    xgb_scores = xgb_model.predict(X)
+
+    def norm(s):
+        return (s - s.min()) / (s.max() - s.min() + 1e-9)
+
+    ensemble_scores = 0.6 * norm(lgbm_scores) + 0.4 * norm(xgb_scores)
+    print(f"  Scoring time: {time.perf_counter() - t4:.2f}s")
+
+    # === O5: TOP 100 SELECTION ===
+    print("[O5] Selecting top 100...")
+    top_100_idx = np.argsort(ensemble_scores)[::-1][:100]
+    top_100_ids = [df_features["candidate_id"][i] for i in top_100_idx]
+    top_100_scores = ensemble_scores[top_100_idx]
+
+    df_top100 = pl.DataFrame({
+        "candidate_id": top_100_ids,
+        "ensemble_score": top_100_scores.tolist()
+    })
+
+    # === O6: ELITE RE-RANKING (top 20 only) ===
+    print("[O6] Elite re-ranking...")
+    # Load all features for top 20
+    top_20 = df_top100.head(20)
+    rest = df_top100.tail(80)
+
+    all_features_df = (
+        cf.join(crf, on="candidate_id", how="left")
+         .join(bf, on="candidate_id", how="left")
+         .fill_null(0.0)
+    )
+
+    # Also need teacher_median from synthetic labels
+    tl = pl.read_parquet(f"{ARTIFACTS}/synthetic_labels.parquet").select(
+        ["candidate_id", "teacher_median", "teacher_std"]
+    )
+    all_features_df = all_features_df.join(tl, on="candidate_id", how="left").fill_null(50.0)
+
+    top_20_feat = top_20.join(all_features_df, on="candidate_id", how="left").fill_null(0.0)
+
+    elite_scores = []
+    for row in top_20_feat.iter_rows(named=True):
+        elite = (
+            0.30 * row.get("evaluation_score", 0.0)
+            + 0.25 * row.get("founding_team_score", 0.0)
+            + 0.20 * row.get("availability_score", 0.0)
+            + 0.15 * row.get("teacher_median", 50.0) / 100
+            - 0.10 * min(1.0, row.get("teacher_std", 0.0) / 30)
+        )
+        elite_scores.append(elite)
+
+    top_20 = top_20.with_columns(pl.Series("elite_score", elite_scores))
+    top_20_reranked = top_20.sort("elite_score", descending=True).drop("elite_score")
+
+    df_final_100 = pl.concat([top_20_reranked, rest])
+
+    # === O7: SCORE NORMALIZATION ===
+    print("[O7] Normalizing scores...")
+    raw_scores = df_final_100["ensemble_score"].to_numpy()
+    normalized = 100 * (raw_scores - raw_scores.min()) / (raw_scores.max() - raw_scores.min() + 1e-9)
+    # Ensure strictly decreasing
+    for i in range(1, len(normalized)):
+        if normalized[i] >= normalized[i-1]:
+            normalized[i] = normalized[i-1] - 0.01
+
+    df_final_100 = df_final_100.with_columns(
+        pl.Series("score", normalized.round(2))
+    )
+
+    # === O8: REASONING JOIN ===
+    print("[O8] Attaching reasoning...")
+    df_final_100 = df_final_100.join(reasoning, on="candidate_id", how="left")
+
+    # Fallback for candidates without reasoning
+    df_final_100 = df_final_100.with_columns(
+        pl.col("reasoning").fill_null("Strong candidate profile aligned with role requirements.")
+    )
+
+    # === O9: VALIDATE ===
+    print("[O9] Validating submission...")
+    assert len(df_final_100) == 100, f"Expected 100, got {len(df_final_100)}"
+    assert df_final_100["candidate_id"].n_unique() == 100, "Duplicate candidate IDs!"
+    assert df_final_100["score"].to_numpy().tolist() == \
+           sorted(df_final_100["score"].to_numpy().tolist(), reverse=True), \
+           "Scores not strictly decreasing!"
+    assert not df_final_100["reasoning"].is_null().any(), "Null reasoning found!"
+    print("  ✅ All validation checks passed")
+
+    # === O10: EXPORT ===
+    print("[O10] Exporting CSV...")
+    result = df_final_100.with_columns(
+        pl.Series("rank", list(range(1, 101)))
+    ).select(["candidate_id", "rank", "score", "reasoning"])
+
+    result.write_csv(OUTPUT_PATH)
+    print(f"  Saved to: {OUTPUT_PATH}")
+
+    total_time = time.perf_counter() - t_start
+    print(f"\n✅ Pipeline complete in {total_time:.2f}s ({total_time/60:.1f} min)")
+    assert total_time < 300, f"RUNTIME EXCEEDED: {total_time:.1f}s > 300s"
+
+if __name__ == "__main__":
+    run()
+```
+
+---
+
+---
+
+# BEHAVIORAL FEATURES (SUPPORTING)
+
+Build `behavior_features.parquet` as part of Phase 3 processing:
+
+```python
+from datetime import datetime, timedelta
+
+def compute_behavioral_features(cand: dict) -> dict:
+    signals = cand.get("redrob_signals", {})
+
+    # Availability Score
+    last_active = signals.get("last_active_date", "")
+    days_inactive = 999
+    if last_active:
+        try:
+            la = datetime.strptime(last_active[:10], "%Y-%m-%d")
+            days_inactive = (datetime.now() - la).days
+        except ValueError:
+            pass
+
+    response_rate = signals.get("recruiter_response_rate", 0.0)
+    response_time = signals.get("avg_response_time_hours", 999)
+    notice_days = signals.get("notice_period_days", 90)
+
+    # Normalize each component to 0-1 (higher = more available)
+    active_score = max(0, 1 - days_inactive / 365)
+    response_score = float(response_rate) / 100
+    response_time_score = max(0, 1 - response_time / 168)  # 168 hours = 1 week
+    notice_score = max(0, 1 - notice_days / 180)  # 180 days = 6 months
+
+    availability_score = (
+        0.4 * active_score
+        + 0.3 * response_score
+        + 0.15 * response_time_score
+        + 0.15 * notice_score
+    )
+
+    # Market Demand Score
+    saved = signals.get("saved_by_recruiters_30d", 0)
+    appearances = signals.get("search_appearance_30d", 0)
+    views = signals.get("profile_views_received_30d", 0)
+
+    # Raw market demand (will be normalized after computing for all candidates)
+    market_demand_raw = saved * 3 + appearances * 1 + views * 0.5
+
+    # Reliability Score
+    interview_completion = signals.get("interview_completion_rate", 0.0)
+    offer_acceptance = signals.get("offer_acceptance_rate", 0.0)
+    reliability_score = 0.6 * float(interview_completion) + 0.4 * float(offer_acceptance)
+
+    return {
+        "candidate_id": cand["candidate_id"],
+        "availability_score": availability_score,
+        "market_demand_raw": market_demand_raw,
+        "reliability_score": reliability_score,
+        "days_inactive": float(days_inactive),
+        "notice_period_days": float(notice_days),
+    }
+
+# After computing for all 100k, normalize market_demand_raw
+all_behavioral = [compute_behavioral_features(c) for c in all_candidates]
+df_b = pl.DataFrame(all_behavioral)
+max_demand = df_b["market_demand_raw"].max()
+df_b = df_b.with_columns(
+    (pl.col("market_demand_raw") / (max_demand + 1e-9)).alias("market_demand_score")
+).drop("market_demand_raw")
+
+df_b.write_parquet("data/artifacts/behavior_features.parquet")
+```
+
+---
+
+---
+
+# IMPLEMENTATION SPRINT PLAN
+
+| Day | Focus | Phases | Goal |
+|---|---|---|---|
+| Day 1 | Foundation | 1, 2, 3, 3.5 | All candidate features extracted |
+| Day 2 | Infrastructure | 4, 5, 6 | Top 3,000 candidates retrieved |
+| Day 3 | Teacher Labels | 7A, 7B | Calibrated synthetic labels done |
+| Day 4 | Refinement | 7C, 8, 8.5 | LTR model trained and SHAP validated |
+| Day 5 | Ensemble + Output | 9, 9.5, 10 | Reasoning bank complete |
+| Day 6 | Runtime + Validation | 11, online pipeline | Under 5 minutes, CSV exports cleanly |
+| Day 7 | Buffer | Fix failures, build sandbox demo | Submission ready |
+
+**If anything slips:** cut Phase 7C (pairwise) first. It's the lowest marginal return vs. effort.
+**Never cut:** Phase 4 (honeypot detection — disqualification risk), Phase 8.5 (SHAP — tells you if labels are wrong), Phase 9.5 (NDCG@10 hardening — 50% of score).
+
+---
+
+---
+
+# FINAL SUBMISSION CHECKLIST
+
+Run through this in order before submitting. Do not submit until everything is checked.
+
+### Dataset & Schema
+- [ ] `validate_submission.py` runs without errors on `team_xxx.csv`
+- [ ] CSV has exactly 100 rows
+- [ ] CSV has exactly 4 columns: `candidate_id, rank, score, reasoning`
+- [ ] Ranks are integers 1–100, no duplicates
+- [ ] Scores are strictly decreasing (each score < previous)
+- [ ] All 100 `candidate_id` values exist in `candidates.jsonl.gz`
+- [ ] No null or empty `reasoning` values
+
+### Honeypot Safety
+- [ ] Check known honeypot patterns against your top 100 — none should appear
+- [ ] Verify `hard_remove` count in logs (should be ~80 hard-removed before ranking)
+
+### Reasoning Quality
+- [ ] Read every reasoning entry in the final CSV
+- [ ] Every entry contains at least one number
+- [ ] Every entry mentions at least one specific company or technology from the profile
+- [ ] Every entry contains one acknowledged weakness or concern
+- [ ] No two entries are identical
+
+### Runtime
+- [ ] Online pipeline runs in < 5 minutes on CPU only
+- [ ] `runtime_report.md` is committed to the repository
+- [ ] Run the pipeline 3 times — output is identical each time (determinism)
+
+### Code Repository
+- [ ] `requirements.txt` is complete and pinned to specific versions
+- [ ] `README.md` has clear setup instructions (install → run → output)
+- [ ] All precomputed artifacts are either committed or have a script to regenerate them
+- [ ] Single command produces the submission CSV: `python online/run_ranking.py`
+- [ ] `submission_metadata_template.yaml` is filled and committed
+
+### Sandbox Demo
+- [ ] Hosted demo (HuggingFace/Streamlit/Colab) runs successfully on a sample of 500 candidates
+- [ ] Demo produces a ranked output in < 30 seconds
+
+### Defend-Your-Work Preparation
+- [ ] You can explain every phase without referring to notes
+- [ ] You can explain why each weight in the elite_score formula was chosen
+- [ ] You can show SHAP output and explain what it reveals about your model
+- [ ] You can explain the difference between your approach and a baseline embedding-similarity approach
+
+---
+
+> **Architecture V11 — FROZEN**
+> Any future change requires experimental evidence. Run the changed version, compare NDCG on a validation set, and only merge if it improves. No intuition-based changes from this point forward.

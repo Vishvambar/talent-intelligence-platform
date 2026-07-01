@@ -38,5 +38,6 @@ offline/                         <-- Core feature extraction & ranking pipeline
 ```
 
 ## Current Status
-- **Phase 1**: Completed & Frozen
-- **Phase 2**: Under Construction
+- **Phase 1 (JD Intelligence)**: Completed & Frozen (See `docs/decisions/001_architecture_refactor_phases1_and_2.md`)
+- **Phase 2 (Ontology Engine)**: Completed & Frozen (See `docs/decisions/001_architecture_refactor_phases1_and_2.md`)
+- **Phase 3+**: Pending architecture blueprint...

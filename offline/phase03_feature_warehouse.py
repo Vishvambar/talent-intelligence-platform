@@ -7,21 +7,24 @@ from tqdm import tqdm
 import polars as pl
 import pandas as pd
 
-# Safely import the Phase 2 ontology vector generator
+# Safely import the Phase 2 graph generator
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from offline.phase02_ontology_engine import compute_ontology_feature_vector
+from offline.phase02_ontology_engine import compute_candidate_graph_features
 
 # Directories
 RAW_DATA_PATH = "data/raw/candidates.jsonl"
 ARTIFACTS_DIR = "data/artifacts"
-CHECKPOINTS_DIR = os.path.join(ARTIFACTS_DIR, "checkpoints")
+PHASE03_DIR = os.path.join(ARTIFACTS_DIR, "phase03")
+os.makedirs(PHASE03_DIR, exist_ok=True)
+CHECKPOINTS_DIR = os.path.join(PHASE03_DIR, "checkpoints")
 os.makedirs(CHECKPOINTS_DIR, exist_ok=True)
 
-FEATURES_PARQUET = os.path.join(ARTIFACTS_DIR, "candidate_features.parquet")
-TEXTS_PARQUET = os.path.join(ARTIFACTS_DIR, "candidate_texts.parquet")
-REGISTRY_JSON = os.path.join(ARTIFACTS_DIR, "feature_registry.json")
-STATS_JSON = os.path.join(ARTIFACTS_DIR, "feature_stats.json")
+FEATURES_PARQUET = os.path.join(PHASE03_DIR, "candidate_features.parquet")
+TEXTS_PARQUET = os.path.join(PHASE03_DIR, "candidate_texts.parquet")
+GRAPH_PARQUET = os.path.join(PHASE03_DIR, "candidate_graph.parquet")
+REGISTRY_JSON = os.path.join(PHASE03_DIR, "feature_registry.json")
+STATS_JSON = os.path.join(PHASE03_DIR, "feature_stats.json")
 
 # Define Company Signals
 CONSULTING_SIGNALS = [
@@ -71,23 +74,37 @@ def extract_candidate_features(raw_line: str, cand: dict) -> tuple:
     # --- Text Aggregates (For Text Parquet) ---
     headline = str(profile.get("headline", ""))
     summary = str(profile.get("summary", ""))
+    profile_text = f"{headline} {summary}"
     skills_text = " ".join([s.get("name", "") if isinstance(s, dict) else str(s) for s in skills])
     
-    # Career text: Concatenate all titles and descriptions
+    # Career text
     career_parts = []
     for r in career:
         career_parts.append(f"{r.get('title', '')} at {r.get('company', '')}: {r.get('description', '')}")
     career_text = " ".join(career_parts)
     
-    retrieval_text = f"{headline} {summary} {skills_text} {career_text}"
+    # Education text
+    education_text = " ".join([f"{str(e.get('degree', ''))} {str(e.get('field', ''))} {str(e.get('institution', ''))}" for e in education])
+    
+    # Projects text
+    projects_text = " ".join([f"{str(p.get('name', ''))} {str(p.get('description', ''))}" for p in cand.get("projects", [])])
+    
+    # Github text
+    github_text = " ".join([str(repo.get("description", "")) for repo in signals.get("github_repos", []) if isinstance(repo, dict)])
+    
+    retrieval_text = f"{profile_text} {skills_text} {career_text} {education_text} {projects_text} {github_text}"
+    bm25_text = retrieval_text
     
     text_row = {
         "candidate_id": candidate_id,
-        "headline": headline,
-        "summary": summary,
+        "profile_text": profile_text,
         "skills_text": skills_text,
         "career_text": career_text,
+        "education_text": education_text,
+        "projects_text": projects_text,
+        "github_text": github_text,
         "retrieval_text": retrieval_text,
+        "bm25_text": bm25_text,
         "raw_candidate_json": raw_line
     }
 
@@ -185,8 +202,7 @@ def extract_candidate_features(raw_line: str, cand: dict) -> tuple:
             company_roles[comp].append(level)
 
     # Technical (Ontology)
-    ontology_text = f"{headline} {summary} {skills_text} {career_text}"
-    ontology_scores = compute_ontology_feature_vector(ontology_text)
+    ontology_scores, graph_edges = compute_candidate_graph_features(retrieval_text, candidate_id)
     
     # Career (Company Types)
     product_score = 0.0
@@ -242,15 +258,20 @@ def extract_candidate_features(raw_line: str, cand: dict) -> tuple:
         "education_tier_score": float(education_tier_score),
         "github_score_imputed": float(github_score_imputed),
         "github_missing": float(github_missing),
-        "assessment_score": float(assessment_score)
+        "assessment_score": float(assessment_score),
+        "ontology_version": "v3.0",
+        "graph_version": "v4.0",
+        "phase2_version": "v2.1",
+        "feature_schema_version": "v5.0",
+        "feature_generator_version": "v1.0"
     }
     
     # Merge ontology scores
     for k, v in ontology_scores.items():
-        if k.endswith("_score") or k.endswith("_matches"):
+        if k.endswith("_score") or k.endswith("_matches") or k.endswith("_count") or k.endswith("_ratio") or k.endswith("_weight"):
             feature_row[k] = float(v)
 
-    return feature_row, text_row
+    return feature_row, text_row, graph_edges
 
 def build_feature_warehouse():
     print("Starting Phase 3: Feature Warehouse Generation...")
@@ -262,16 +283,19 @@ def build_feature_warehouse():
     chunk_idx = 0
     all_feature_files = []
     all_text_files = []
+    all_graph_files = []
     
     for batch in tqdm(stream_candidates(RAW_DATA_PATH), total=raw_count // 5000 + 1):
         chunk_features = []
         chunk_texts = []
+        chunk_graphs = []
         
         for raw_line, cand in batch:
             try:
-                f_row, t_row = extract_candidate_features(raw_line, cand)
+                f_row, t_row, g_edges = extract_candidate_features(raw_line, cand)
                 chunk_features.append(f_row)
                 chunk_texts.append(t_row)
+                chunk_graphs.extend(g_edges)
             except Exception as e:
                 print(f"Error extracting features for candidate {cand.get('candidate_id', 'unknown')}: {e}")
         
@@ -280,26 +304,33 @@ def build_feature_warehouse():
         
         f_df = pl.DataFrame(chunk_features)
         t_df = pl.DataFrame(chunk_texts)
+        g_df = pl.DataFrame(chunk_graphs) if chunk_graphs else pl.DataFrame({"candidate_id": [], "parent": [], "child": [], "edge_weight": [], "depth": [], "origin": []})
         
         f_path = os.path.join(CHECKPOINTS_DIR, f"features_part_{chunk_idx:03d}.parquet")
         t_path = os.path.join(CHECKPOINTS_DIR, f"texts_part_{chunk_idx:03d}.parquet")
+        g_path = os.path.join(CHECKPOINTS_DIR, f"graphs_part_{chunk_idx:03d}.parquet")
         
         f_df.write_parquet(f_path)
         t_df.write_parquet(t_path)
+        g_df.write_parquet(g_path)
         
         all_feature_files.append(f_path)
         all_text_files.append(t_path)
+        all_graph_files.append(g_path)
         
     # 3. Merge Chunks
     print("Merging chunks into final Parquet artifacts...")
     final_features_df = pl.concat([pl.read_parquet(f) for f in all_feature_files])
     final_texts_df = pl.concat([pl.read_parquet(f) for f in all_text_files])
+    final_graphs_df = pl.concat([pl.read_parquet(f) for f in all_graph_files])
     
     final_features_df.write_parquet(FEATURES_PARQUET)
     final_texts_df.write_parquet(TEXTS_PARQUET)
+    final_graphs_df.write_parquet(GRAPH_PARQUET)
     
     print(f"Saved {len(final_features_df)} features to {FEATURES_PARQUET}")
     print(f"Saved {len(final_texts_df)} texts to {TEXTS_PARQUET}")
+    print(f"Saved {len(final_graphs_df)} edges to {GRAPH_PARQUET}")
     
     # 4. Generate Registry & Stats
     print("Generating Feature Registry and Statistics...")

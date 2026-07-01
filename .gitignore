@@ -1,4 +1,6 @@
-# Python
+# ==============================================================================
+# Python Core
+# ==============================================================================
 __pycache__/
 *.py[cod]
 *$py.class
@@ -16,51 +18,104 @@ parts/
 sdist/
 var/
 wheels/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-# Virtual environments
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ==============================================================================
+# Virtual Environments
+# ==============================================================================
 venv/
 .venv/
 env/
 ENV/
-# Data & Large Artifacts
+env.bak/
+venv.bak/
+
+# ==============================================================================
+# Data & Artifacts (Project Specific)
+# ==============================================================================
+data/*
+!data/.gitkeep
+artifacts/
 data/raw/
+data/artifacts/
 data/artifacts/**/*.parquet
 data/artifacts/*.parquet
 data/artifacts/checkpoints/
 data/artifacts/*.index
 data/artifacts/*.pkl
-# Secrets & Environment Variables
-.env
-.env.*
-*.env
-!.env.example
+*.parquet
+*.pkl
+*.model
+*.bin
+*.h5
+*.hdf5
+*.pb
 
-# OS & Editor
-.DS_Store
-.vscode/
-.idea/
-*.swp
-
-# Logs & Scratch
+# ==============================================================================
+# Logs, Scratch & Output
+# ==============================================================================
 logs/
 *.log
 scratch/
 script.py
 test.py
 test_*.py
+*.csv
+submission.csv
 
+# ==============================================================================
 # Jupyter Notebooks
+# ==============================================================================
 .ipynb_checkpoints/
 profile_default/
 ipython_config.py
 
+# ==============================================================================
 # Testing & Typing
+# ==============================================================================
 .pytest_cache/
 .mypy_cache/
 .coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
 htmlcov/
+.tox/
+.nox/
 
-# Local Output Files
-*.csv
+# ==============================================================================
+# Secrets & Environment Variables
+# ==============================================================================
+.env
+.env.*
+*.env
+!.env.example
+credentials.json
+client_secret.json
+
+# ==============================================================================
+# OS & Editor
+# ==============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.gemini/
