@@ -65,10 +65,12 @@ def train_ranker():
         # Future extension: Multiple recruiter datasets.
         model = lgb.LGBMRanker(
             objective="lambdarank",
-            learning_rate=0.05,
-            num_leaves=31,
-            max_depth=6,
-            n_estimators=100,
+            learning_rate=0.01,
+            num_leaves=7,
+            max_depth=3,
+            min_child_samples=5,
+            colsample_bytree=1.0,
+            n_estimators=500,
             random_state=42 + fold,
             n_jobs=-1
         )
@@ -79,7 +81,8 @@ def train_ranker():
             group=[len(X_t)],
             eval_set=[(X_v, y_v)],
             eval_group=[[len(X_v)]],
-            callbacks=[lgb.early_stopping(stopping_rounds=20, verbose=False)]
+            eval_at=[10, 50, 100],
+            callbacks=[lgb.early_stopping(stopping_rounds=50, verbose=False)]
         )
         
         preds = model.predict(X_v)
@@ -107,9 +110,11 @@ def train_ranker():
     print("\nTraining final LightGBMRanker on 100% of data...")
     lgbm_params = {
         "objective": "lambdarank",
-        "learning_rate": 0.05,
-        "num_leaves": 31,
-        "max_depth": 6,
+        "learning_rate": 0.01,
+        "num_leaves": 7,
+        "max_depth": 3,
+        "min_child_samples": 5,
+        "colsample_bytree": 1.0,
         "n_estimators": int(np.mean(cv_best_iters)), # Data-driven from CV
         "random_state": 42,
         "n_jobs": -1
@@ -171,8 +176,9 @@ def train_ranker():
         json.dump(feature_stats, f, indent=2)
         
     # Generate Hashes for Manifest
-    dataset_hash = hashlib.sha256(X.tobytes()).hexdigest()
-    with open(os.path.join(OUTPUT_DIR, "model.pkl"), "rb") as f:
+    with open(os.path.join(OUTPUT_DIR, "dataset.parquet"), "rb") as f:
+        dataset_hash = hashlib.sha256(f.read()).hexdigest()
+    with open(os.path.join(OUTPUT_DIR, "lgbm_model.pkl"), "rb") as f:
         model_hash = hashlib.sha256(f.read()).hexdigest()
         
     manifest = {
