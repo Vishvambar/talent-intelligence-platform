@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="100%" height="100%">
+  <!-- Definitions for gradients and shadows -->
+  <defs>
+    <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f8f9fa"/>
+      <stop offset="100%" stop-color="#e9ecef"/>
+    </linearGradient>
+    <linearGradient id="box-gradient-offline" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#4facfe"/>
+      <stop offset="100%" stop-color="#00f2fe"/>
+    </linearGradient>
+    <linearGradient id="box-gradient-online" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#43e97b"/>
+      <stop offset="100%" stop-color="#38f9d7"/>
+    </linearGradient>
+    <linearGradient id="box-gradient-artifact" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#fa709a"/>
+      <stop offset="100%" stop-color="#fee140"/>
+    </linearGradient>
+    <filter id="drop-shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="1000" fill="url(#bg-gradient)" rx="16"/>
+
+  <!-- Title -->
+  <text x="400" y="80" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="32" font-weight="bold" fill="#212529" text-anchor="middle">Redrob Candidate Ranking Pipeline</text>
+  <text x="400" y="115" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="18" fill="#6c757d" text-anchor="middle">Knowledge Distillation Architecture</text>
+
+  <!-- Zones -->
+  <!-- Offline Zone -->
+  <rect x="50" y="160" width="320" height="580" fill="#ffffff" fill-opacity="0.6" rx="12" stroke="#dee2e6" stroke-dasharray="8 4"/>
+  <text x="210" y="200" font-family="sans-serif" font-size="20" font-weight="bold" fill="#495057" text-anchor="middle">Offline (Heavy Compute)</text>
+
+  <!-- Online Zone -->
+  <rect x="430" y="160" width="320" height="580" fill="#ffffff" fill-opacity="0.6" rx="12" stroke="#dee2e6" stroke-dasharray="8 4"/>
+  <text x="590" y="200" font-family="sans-serif" font-size="20" font-weight="bold" fill="#495057" text-anchor="middle">Online (CPU Inference)</text>
+
+  <!-- Boxes (Offline) -->
+  <g transform="translate(110, 240)">
+    <rect width="200" height="60" rx="8" fill="url(#box-gradient-offline)" filter="url(#drop-shadow)"/>
+    <text x="100" y="36" font-family="sans-serif" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">Raw Resumes &amp; JDs</text>
+  </g>
+
+  <g transform="translate(110, 360)">
+    <rect width="200" height="60" rx="8" fill="url(#box-gradient-offline)" filter="url(#drop-shadow)"/>
+    <text x="100" y="36" font-family="sans-serif" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">Hybrid Retrieval</text>
+  </g>
+
+  <g transform="translate(110, 480)">
+    <rect width="200" height="60" rx="8" fill="url(#box-gradient-offline)" filter="url(#drop-shadow)"/>
+    <text x="100" y="36" font-family="sans-serif" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">Recruiter Teacher</text>
+  </g>
+
+  <g transform="translate(110, 600)">
+    <rect width="200" height="60" rx="8" fill="url(#box-gradient-offline)" filter="url(#drop-shadow)"/>
+    <text x="100" y="36" font-family="sans-serif" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">Evidence Generator</text>
+  </g>
+
+  <!-- Connecting Lines (Offline) -->
+  <path d="M 210 300 L 210 350" stroke="#adb5bd" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 210 420 L 210 470" stroke="#adb5bd" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 210 540 L 210 590" stroke="#adb5bd" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- Middle Bridge -->
+  <g transform="translate(300, 780)">
+    <rect width="200" height="80" rx="8" fill="url(#box-gradient-artifact)" filter="url(#drop-shadow)"/>
+    <text x="100" y="36" font-family="sans-serif" font-size="16" font-weight="bold" fill="#ffffff" text-anchor="middle">Distilled Artifacts</text>
+    <text x="100" y="56" font-family="sans-serif" font-size="14" fill="#ffffff" text-anchor="middle">(Features &amp; Evidence)</text>
+  </g>
+  
+  <path d="M 210 660 L 210 720 L 400 720 L 400 770" stroke="#fa709a" stroke-width="4" fill="none" marker-end="url(#arrow-pink)"/>
+  <path d="M 400 770 L 400 720 L 590 720 L 590 660" stroke="#fa709a" stroke-width="4" fill="none" marker-end="url(#arrow-pink-up)"/>
+
+  <!-- Boxes (Online) -->
+  <g transform="translate(490, 600)">
+    <rect width="200" height="60" rx="8" fill="url(#box-gradient-online)" filter="url(#drop-shadow)"/>
+    <text x="100" y="36" font-family="sans-serif" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">Student Ranker</text>
+  </g>
+
+  <g transform="translate(490, 480)">
+    <rect width="200" height="60" rx="8" fill="url(#box-gradient-online)" filter="url(#drop-shadow)"/>
+    <text x="100" y="36" font-family="sans-serif" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">Elite Re-Ranker</text>
+  </g>
+
+  <g transform="translate(490, 360)">
+    <rect width="200" height="60" rx="8" fill="url(#box-gradient-online)" filter="url(#drop-shadow)"/>
+    <text x="100" y="36" font-family="sans-serif" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">Reasoning Renderer</text>
+  </g>
+
+  <g transform="translate(490, 240)">
+    <rect width="200" height="60" rx="8" fill="url(#box-gradient-online)" filter="url(#drop-shadow)"/>
+    <text x="100" y="36" font-family="sans-serif" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">submission.csv</text>
+  </g>
+
+  <!-- Connecting Lines (Online - Upward Flow) -->
+  <path d="M 590 590 L 590 550" stroke="#adb5bd" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 590 470 L 590 430" stroke="#adb5bd" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 590 350 L 590 310" stroke="#adb5bd" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- Markers -->
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#adb5bd"/>
+    </marker>
+    <marker id="arrow-pink" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#fa709a"/>
+    </marker>
+    <marker id="arrow-pink-up" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#fa709a"/>
+    </marker>
+  </defs>
+
+  <!-- Footer -->
+  <text x="400" y="950" font-family="sans-serif" font-size="14" fill="#ced4da" text-anchor="middle">100% Deterministic | Zero Online LLM Calls | 0.9s Runtime</text>
+
+</svg>

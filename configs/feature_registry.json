@@ -1,0 +1,98 @@
+{
+  "registry_version": "1.0.0",
+  "total_features": 23,
+  "features": {
+    "recruiter_response_rate": {
+      "phase": "Phase 3: Feature Warehouse",
+      "description": "Historical alignment of recruiter intent from candidate platform interaction."
+    },
+    "skills_business_score": {
+      "phase": "Phase 2: Ontology Engine",
+      "description": "Deterministic semantic extraction of core business logic requirements."
+    },
+    "skills_technical_score": {
+      "phase": "Phase 2: Ontology Engine",
+      "description": "Deterministic semantic extraction of core technical requirements."
+    },
+    "semantic_alignment_score": {
+      "phase": "Phase 6: Hybrid Retrieval",
+      "description": "Dense vector overlap between JD graph and Candidate embedding (E5)."
+    },
+    "lexical_overlap_score": {
+      "phase": "Phase 6: Hybrid Retrieval",
+      "description": "Exact keyword string match derived from BM25."
+    },
+    "integrity_score": {
+      "phase": "Phase 4: Integrity Layer",
+      "description": "Penalty multiplier enforcing chronological coherence and penalizing keyword stuffing."
+    },
+    "time_in_role": {
+      "phase": "Phase 3: Feature Warehouse",
+      "description": "Calculated total duration in most relevant target position."
+    },
+    "seniority_alignment": {
+      "phase": "Phase 3: Feature Warehouse",
+      "description": "Boolean match between JD requested tier (e.g. Principal) and candidate trajectory."
+    },
+    "total_experience_years": {
+      "phase": "Phase 3: Feature Warehouse",
+      "description": "Aggregate sum of normalized career timeline."
+    },
+    "github_activity_score": {
+      "phase": "Phase 3: Feature Warehouse",
+      "description": "Portfolio metric evaluating code availability."
+    },
+    "education_tier": {
+      "phase": "Phase 3: Feature Warehouse",
+      "description": "Categorical ranking of academic background relevant to the domain."
+    },
+    "certification_count": {
+      "phase": "Phase 3: Feature Warehouse",
+      "description": "Total relevant domain certifications."
+    },
+    "location_match": {
+      "phase": "Phase 3: Feature Warehouse",
+      "description": "Geographical constraint validation (Remote vs On-Site)."
+    },
+    "job_hopping_penalty": {
+      "phase": "Phase 4: Integrity Layer",
+      "description": "Negative modifier for candidates with >3 roles <1 year duration."
+    },
+    "recent_promotion_flag": {
+      "phase": "Phase 3: Feature Warehouse",
+      "description": "Indicates upward trajectory in recent 2 years."
+    },
+    "leadership_experience": {
+      "phase": "Phase 2: Ontology Engine",
+      "description": "Extracted evidence of team management or architecture ownership."
+    },
+    "domain_expertise_score": {
+      "phase": "Phase 2: Ontology Engine",
+      "description": "Specific alignment to Enterprise Search / Retrieval domain."
+    },
+    "tooling_diversity": {
+      "phase": "Phase 3: Feature Warehouse",
+      "description": "Count of distinct, relevant technologies identified in candidate profile."
+    },
+    "company_tier_match": {
+      "phase": "Phase 3: Feature Warehouse",
+      "description": "Alignment of previous company scale with target JD scale."
+    },
+    "publication_flag": {
+      "phase": "Phase 3: Feature Warehouse",
+      "description": "Boolean indicating academic or industry publications."
+    },
+    "patent_flag": {
+      "phase": "Phase 3: Feature Warehouse",
+      "description": "Boolean indicating registered patents."
+    },
+    "open_source_contributions": {
+      "phase": "Phase 3: Feature Warehouse",
+      "description": "Flag for active engagement in open source repositories."
+    },
+    "interview_historical_pass_rate": {
+      "phase": "Phase 3: Feature Warehouse",
+      "description": "Platform-derived metric indicating candidate success in similar past funnels."
+    }
+  }
+}

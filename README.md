@@ -1,5 +1,7 @@
 # Redrob Candidate Ranking Pipeline
 
+> **Estimated Review Time: 5 minutes**
+
 ![Python](https://img.shields.io/badge/Python-3.12-blue.svg)
 ![LightGBM](https://img.shields.io/badge/LightGBM-4.6.0-green.svg)
 ![XGBoost](https://img.shields.io/badge/XGBoost-3.2.0-red.svg)
@@ -36,85 +38,73 @@ Instead of relying on runtime LLM inference, our system distills recruiter reaso
 
 ## Architecture
 
-```mermaid
-flowchart TD
-    subgraph Offline [Offline Knowledge Distillation]
-        A[Raw JDs & Resumes] -->|Ontology Engine| B(Recruiter Teacher)
-        B --> C[BM25 + Dense Retrieval]
-        C --> D[Distilled Training Dataset]
-        D -->|Feature Engineering| E[(Evidence Generator)]
-    end
+<p align="center">
+  <img src="architecture.svg" alt="Architecture Flow" width="600"/>
+</p>
 
-    subgraph Online [Online Lightweight Inference]
-        F[inference_features.parquet] --> G{Student Ranker}
-        G --> H[Elite Reranking Thresholds]
-        H -->|Render Explanations| E
-        E --> I[Submission Engine]
-    end
+## Why This Beats Naive RAG
 
-    Offline ==>|Distilled Artifacts| Online
-```
-
-## Pipeline Timeline
-
-```text
-Offline
-  ↓
-Retrieval Engine
-  ↓
-Recruiter Teacher
-  ↓
-Evidence Generator
-====================
-Online
-  ↓
-run_ranking.py
-  ↓
-submission.csv
-```
-
-## Performance Metrics
-
-| Metric             | Value   |
-| ------------------ | ------- |
-| Candidates         | 100,000 |
-| Final Ranking      | Top 100 |
-| Online LLM Calls   | 0       |
-| Replay Determinism | 100%    |
-| Peak RAM           | 145 MB  |
-
-*Offline preprocessing performed once.*
-*Online inference: ~0.2 seconds CPU.*
-
-## Design Principles
-
-- ✓ **Deterministic**: 100% mathematically reproducible across runs.
-- ✓ **Explainable**: Uses a structured Evidence Bank rather than hallucinated text.
-- ✓ **Lightweight**: Inference bypasses massive neural nets in favor of gradient boosters.
-- ✓ **Production Ready**: Robust telemetry, safety audits, and determinism replays built-in.
-- ✓ **CPU First**: Engineered specifically for constrained CPU environments.
+| Feature           | Naive LLM / RAG System  | This Distillation System |
+| ----------------- | ----------------------- | ------------------------ |
+| **Retrieval**     | Embedding only (Vector) | Hybrid (BM25 + Vector)   |
+| **Execution**     | Runtime LLM             | Offline Teacher          |
+| **Explanation**   | Hallucination Risk      | Pre-computed Evidence Bank|
+| **Consistency**   | Non-deterministic       | 10x Replay Tested        |
+| **Latency**       | ~15s per query          | ~0.9s for 100k records   |
 
 ## Quick Start Sandbox
 
 We have prepared a frictionless Sandbox environment. You can run the entire inference pipeline and pass all safety audits in three commands:
 
 ```bash
-# 1. Install rigorously pinned dependencies
+# 1. Install rigorously pinned dependencies (Python 3.12)
 make install
 
 # 2. Run the deterministic inference pipeline
 make run
+```
 
+### Execution Preview
+*If you do not wish to run the code locally, this is the exact output of `make run`:*
+```text
+Verifying Artifact Integrity Checksums...
+Loading inference features...
+Loading Models...
+Executing LTR Inference...
+Applying Static Ensemble...
+Applying Elite Reranking to Top 50...
+Loading Evidence Bank...
+Rendering Reasoning Strings...
+✅ Kaggle Inference Complete! Output saved to online/submission.csv
+
+=========================
+REDROB PIPELINE SUMMARY
+=========================
+Candidates processed : 100000
+Models               : LightGBM + XGBoost
+Inference time       : 0.902 s
+Elite reranked       : 50
+Submission rows      : 100
+Deterministic        : YES
+Reasoning source     : Evidence Bank
+```
+
+```bash
 # 3. (Optional) Run the safety and determinism audits
 make audit
 ```
-
-**Expected Outputs:**
+*Exact output of `make audit`:*
 ```text
-submission.csv
-pipeline_metadata.json
-runtime_report (stdout)
+✅ Reasoning Diversity: 100/100 unique explanations.
+✅ Candidate ID existence verified.
+Executing Phase 11.25 Submission Replay Audit (10x)...
+✅ PASSED: 10/10 runs produced identical SHA256 hashes.
 ```
+
+## Expected Outputs
+Upon successful execution, the pipeline will generate:
+- `online/submission.csv` (The final output containing candidate ranking and reasoning)
+- `online/pipeline_metadata.json` (Telemetry logging runtime and peak RAM)
 
 ## Failure Modes
 
@@ -136,9 +126,9 @@ Project Root
 ├── configs/             # Configuration-driven thresholds and hyperparams
 ├── artifacts/           # Trained models and the Evidence Bank parquet
 ├── data/raw/            # Official Redrob datasets and specifications
-├── docs/                # Engineering whitepapers and decisions
-├── ARCHITECTURE.md      # Full pipeline schematic
+├── EXECUTIVE_SUMMARY.md # The 90-second CEO project pitch
 ├── WHY_THIS_SYSTEM.md   # Explicit engineering decisions and tradeoffs
+├── LESSONS_LEARNED.md   # Architectural pivot history
 ├── METHODOLOGY.md       # 200-word pipeline summary
 ├── CHANGELOG.md         # Iteration history
 ├── LICENSE              # MIT License
@@ -147,4 +137,7 @@ Project Root
 ```
 
 ## Deep Dives
-For questions regarding specific engineering tradeoffs (e.g., "Why LightGBM instead of an LLM?" or "Why an Evidence Bank?"), please read **[WHY_THIS_SYSTEM.md](WHY_THIS_SYSTEM.md)**. For the exact functional architecture, read **[ARCHITECTURE_V12_FINAL](Architectures/ARCHITECTURE_V12_FINAL.md)**.
+For questions regarding specific engineering tradeoffs (e.g., "Why LightGBM instead of an LLM?" or "Why an Evidence Bank?"), please read **[WHY_THIS_SYSTEM.md](WHY_THIS_SYSTEM.md)**. To read a 90-second overview of our architectural goals, read **[EXECUTIVE_SUMMARY.md](EXECUTIVE_SUMMARY.md)**.
+
+## Acknowledgements
+Designed for the India Runs Data and AI Challenge. Engineered to strictly satisfy the production constraints published by the Redrob ranking team.
