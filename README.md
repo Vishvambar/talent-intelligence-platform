@@ -5,7 +5,6 @@
 ![XGBoost](https://img.shields.io/badge/XGBoost-3.2.0-red.svg)
 ![Polars](https://img.shields.io/badge/Polars-Fast-yellow.svg)
 ![License](https://img.shields.io/badge/License-MIT-blue.svg)
-![Status](https://img.shields.io/badge/Status-Production%20Ready-success.svg)
 
 ## Quick Facts
 ```text
@@ -14,43 +13,78 @@ Peak Memory:          ~145 MB
 Inference Time:       ~0.2 seconds
 LLM Calls Online:     None
 Models:               LightGBM + XGBoost
-Retrieval:            BM25 + E5 (Dense)
+Retrieval:            Hybrid BM25 + Dense
 Deterministic:        Yes
 Replay Tested:        Yes
+```
+
+```text
+WHY THIS SYSTEM?
+
+✓ No API calls
+✓ No online LLMs
+✓ Deterministic
+✓ CPU only
+✓ Replay tested
+✓ Explainable
 ```
 
 ## Overview
 This repository contains the deterministic, multi-modal **Recruiter Relevance Prediction Engine** for the Redrob Candidate Ranking Challenge. 
 
-Instead of relying on volatile LLMs at runtime, we **distilled expensive recruiter reasoning into lightweight ranking models** so the online pipeline satisfies strict CPU and runtime constraints.
+Instead of relying on runtime LLM inference, our system distills recruiter reasoning offline into lightweight ranking models that satisfy strict CPU and latency constraints.
 
 ## Architecture
 
 ```mermaid
 flowchart TD
-    subgraph Offline [Phase 1-8: Offline Heavy Compute]
-        A[Raw JDs & Resumes] -->|Ontology Engine| B(Teacher LLM)
+    subgraph Offline [Offline Knowledge Distillation]
+        A[Raw JDs & Resumes] -->|Ontology Engine| B(Recruiter Teacher)
         B --> C[BM25 + Dense Retrieval]
         C --> D[Distilled Training Dataset]
-        D -->|Feature Engineering| E[(Evidence Bank)]
+        D -->|Feature Engineering| E[(Evidence Generator)]
     end
 
-    subgraph Online [Phase 9-11: Online Lightweight Inference]
-        F[inference_features.parquet] --> G{LightGBM + XGBoost Student}
+    subgraph Online [Online Lightweight Inference]
+        F[inference_features.parquet] --> G{Student Ranker}
         G --> H[Elite Reranking Thresholds]
         H -->|Render Explanations| E
-        E --> I[submission.csv]
+        E --> I[Submission Engine]
     end
 
     Offline ==>|Distilled Artifacts| Online
 ```
 
+## Pipeline Timeline
+
+```text
+Offline
+  ↓
+Retrieval Engine
+  ↓
+Recruiter Teacher
+  ↓
+Evidence Generator
+====================
+Online
+  ↓
+run_ranking.py
+  ↓
+submission.csv
+```
+
 ## Performance Metrics
 
-| Phase | Operation | Hardware | Time | RAM |
-|-------|-----------|----------|------|-----|
-| Offline | Phase 1-8 Teacher Compute | GPU | ~4 hours | ~32 GB |
-| Online | Phase 9-11 Final Inference | CPU | ~0.2 sec | ~145 MB |
+| Metric             | Value   |
+| ------------------ | ------- |
+| Candidates         | 100,000 |
+| Final Ranking      | Top 100 |
+| Online LLM Calls   | 0       |
+| Replay Determinism | 100%    |
+| Peak RAM           | 145 MB  |
+
+*Offline preprocessing performed once.*
+*Online inference: ~0.2 seconds CPU.*
 
 ## Design Principles
 
@@ -58,7 +92,7 @@ flowchart TD
 - ✓ **Explainable**: Uses a structured Evidence Bank rather than hallucinated text.
 - ✓ **Lightweight**: Inference bypasses massive neural nets in favor of gradient boosters.
 - ✓ **Production Ready**: Robust telemetry, safety audits, and determinism replays built-in.
-- ✓ **CPU First**: Engineered specifically to dominate within constrained offline environments.
+- ✓ **CPU First**: Engineered specifically for constrained CPU environments.
 
 ## Quick Start Sandbox
 
@@ -75,14 +109,31 @@ make run
 make audit
 ```
 
-**Expected Output:** A perfectly formatted `submission.csv` containing the Top 100 mathematically ranked candidates with fully rendered recruiter reasoning strings.
+**Expected Outputs:**
+```text
+submission.csv
+pipeline_metadata.json
+runtime_report (stdout)
+```
+
+## Failure Modes
+
+```text
+If Evidence Bank missing      -> Abort
+If schema mismatch            -> Warning & Fallback
+If feature drift              -> Warning
+If runtime exceeds threshold  -> Warning
+If duplicate IDs              -> Abort
+If score non-monotonic        -> Abort
+```
 
 ## Repository Structure
 
 ```text
 Project Root
-├── offline/             # Phase 1-8: Heavy Teacher pre-computation scripts
-├── online/              # Phase 9-11: Lightweight Student inference & audits
+├── offline/             # Heavy Recruiter Teacher pre-computation modules
+├── online/              # Lightweight Student Ranker inference & audits
+├── configs/             # Configuration-driven thresholds and hyperparams
 ├── artifacts/           # Trained models and the Evidence Bank parquet
 ├── data/raw/            # Official Redrob datasets and specifications
 ├── docs/                # Engineering whitepapers and decisions
