@@ -155,15 +155,17 @@ def train_xgb_ranker():
     with open(os.path.join(OUTPUT_DIR, "params.json"), "w") as f:
         json.dump(final_params, f, indent=2)
         
-    training_metrics = {
-        "cv_ndcg10_mean": avg_ndcg,
-        "cv_ndcg10_std": float(np.std(oof_ndcgs)),
-        "feature_hash": f_hash,
-        "num_features": len(feature_cols),
-        "num_candidates": len(X)
-    }
     with open(os.path.join(OUTPUT_DIR, "training_metrics.json"), "w") as f:
-        json.dump(training_metrics, f, indent=2)
+        json.dump({
+            "cv_ndcg10_mean": avg_ndcg,
+            "cv_ndcg10_std": float(np.std(oof_ndcgs)),
+            "feature_hash": f_hash,
+            "num_features": len(feature_cols),
+            "num_candidates": len(X),
+            "avg_oof_ndcg10": avg_ndcg,
+            "final_trees": final_params["n_estimators"],
+            "fold_trees": cv_best_iters
+        }, f, indent=2)
         
     feature_importances = final_model.feature_importances_
     fi_dict = {f: float(imp) for f, imp in zip(feature_cols, feature_importances)}

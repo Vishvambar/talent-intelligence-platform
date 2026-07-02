@@ -185,24 +185,30 @@ def run_ensemble_blending():
         
     # Save Elite Formula for Phase 11
     # Determine valid features based on actual dataset schema
+    try:
+        feat_df = pl.read_parquet(os.path.join(PHASE8_DIR, "inference_features.parquet"))
+        feat_cols = feat_df.columns
+    except:
+        feat_cols = []
+        
     valid_features = {"ensemble_score": 0.70}
     
-    if "retrieval_strength" in df.columns:
+    if "retrieval_strength" in feat_cols:
         valid_features["retrieval_strength"] = 0.20
-    elif "retrieval_score" in df.columns:
+    elif "retrieval_score" in feat_cols:
         valid_features["retrieval_score"] = 0.20
         
-    if "dense_consensus_score" in df.columns:
+    if "dense_consensus_score" in feat_cols:
         valid_features["dense_consensus_score"] = 0.20
-    elif "vector_db_score" in df.columns:
+    elif "vector_db_score" in feat_cols:
         valid_features["vector_db_score"] = 0.20
         
-    if "technical_coverage" in df.columns:
+    if "technical_coverage" in feat_cols:
         valid_features["technical_coverage"] = 0.20
-    elif "evaluation_score" in df.columns:
+    elif "evaluation_score" in feat_cols:
         valid_features["evaluation_score"] = 0.20
         
-    if "integrity_score" in df.columns:
+    if "integrity_score" in feat_cols:
         valid_features["integrity_score"] = 0.10
 
     elite_formula = {

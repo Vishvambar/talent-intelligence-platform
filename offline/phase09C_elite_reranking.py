@@ -84,8 +84,8 @@ def run_elite_reranking():
         ens_score = row.get("ensemble_score", 0.0)
         
         # 2. Graph Quality Math (Explicitly disable if features are absent)
-        if "graph_expansion_ratio" in row:
-            g_exp = row.get("graph_expansion_ratio", 0.0)
+        if "expanded_ratio" in row:
+            g_exp = row.get("expanded_ratio", 0.0)
             g_dens = row.get("graph_density", 0.0)
             g_dep = row.get("graph_avg_depth", 0.0)
             g_edge = row.get("graph_edge_density", 0.0)
