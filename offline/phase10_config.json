@@ -1,11 +1,13 @@
 {
-  "gap_threshold": 0.20,
+  "gap_threshold": 0.10,
+  "strength_threshold_ontology": 0.25,
+  "strength_threshold_coverage": 0.70,
   "jd_weights": {
     "retrieval_score": 0.30,
     "vector_db_score": 0.25,
     "evaluation_score": 0.25,
-    "ml_score": 0.10,
-    "embedding_score": 0.10
+    "ml_infrastructure_score": 0.10,
+    "embeddings_score": 0.10
   },
   "risk_thresholds": {
     "integrity_score_min": 0.60,

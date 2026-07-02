@@ -10,6 +10,7 @@ from tqdm import tqdm
 # ==============================================================================
 PHASE03_ARTIFACTS = "data/artifacts/phase03"
 PHASE04_ARTIFACTS = "data/artifacts/phase04"
+PHASE06_ARTIFACTS = "artifacts/phase06"
 OUTPUT_DIR = "artifacts/phase10"
 CONFIG_PATH = "offline/phase10_config.json"
 
@@ -21,13 +22,15 @@ def load_config():
     except FileNotFoundError:
         print("Using fallback configuration (file not found)")
         return {
-            "gap_threshold": 0.20,
+            "gap_threshold": 0.10,
+            "strength_threshold_ontology": 0.25,
+            "strength_threshold_coverage": 0.70,
             "jd_weights": {
                 "retrieval_score": 0.30,
                 "vector_db_score": 0.25,
                 "evaluation_score": 0.25,
-                "ml_score": 0.10,
-                "embedding_score": 0.10
+                "ml_infrastructure_score": 0.10,
+                "embeddings_score": 0.10
             }
         }
 
@@ -38,9 +41,9 @@ FEATURE_LABELS = {
     "retrieval_score": "Retrieval Systems (RAG)",
     "vector_db_score": "Vector Databases",
     "evaluation_score": "Evaluation Pipelines (NDCG/MAP)",
-    "ml_score": "Machine Learning",
-    "embedding_score": "Dense Embeddings",
-    "llm_score": "Large Language Models"
+    "ml_infrastructure_score": "Machine Learning",
+    "embeddings_score": "Dense Embeddings",
+    "llm_fine_tuning_score": "Large Language Models"
 }
 
 def compute_hash(payload: dict) -> str:
@@ -57,7 +60,7 @@ def generate_evidence_components(row: dict) -> dict:
     # Dynamic Domain Inference
     scores = {
         "Retrieval/Search": float(row.get("retrieval_score", 0.0)),
-        "ML/AI": float(row.get("ml_score", 0.0)),
+        "ML/AI": float(row.get("ml_infrastructure_score", 0.0)),
         "Vector/Data Systems": float(row.get("vector_db_score", 0.0)),
         "Backend/AI Engineering": 0.1  # Base default
     }
@@ -96,12 +99,14 @@ def generate_evidence_components(row: dict) -> dict:
     strengths = []
     gaps = []
     
-    jd_weights = CONFIG["jd_weights"]
-    gap_threshold = CONFIG["gap_threshold"]
+    jd_weights = CONFIG.get("jd_weights", {})
+    gap_threshold = CONFIG.get("gap_threshold", 0.10)
+    st_cov = CONFIG.get("strength_threshold_coverage", 0.70)
+    st_ont = CONFIG.get("strength_threshold_ontology", 0.25)
     
     # Add Phase 6 Coverage Metrics as High-Value Strengths
     tech_cov = float(row.get("technical_coverage", 0.0))
-    if tech_cov >= 0.70:
+    if tech_cov >= st_cov:
         strengths.append({
             "label": f"Matched {int(tech_cov * 100)}% technical priorities",
             "score": tech_cov,
@@ -110,7 +115,7 @@ def generate_evidence_components(row: dict) -> dict:
         })
         
     biz_cov = float(row.get("business_coverage", 0.0))
-    if biz_cov >= 0.70:
+    if biz_cov >= st_cov:
         strengths.append({
             "label": f"Matched {int(biz_cov * 100)}% business priorities",
             "score": biz_cov,
@@ -119,7 +124,7 @@ def generate_evidence_components(row: dict) -> dict:
         })
         
     beh_cov = float(row.get("behavioral_coverage", 0.0))
-    if beh_cov >= 0.70:
+    if beh_cov >= st_cov:
         strengths.append({
             "label": f"Matched {int(beh_cov * 100)}% behavioral priorities",
             "score": beh_cov,
@@ -131,9 +136,9 @@ def generate_evidence_components(row: dict) -> dict:
         score = float(row.get(feat, 0.0))
         weight = jd_weights.get(feat, 0.10)
         
-        if score >= 0.70:
+        if score >= st_ont:
             # High strength
-            render_priority = weight * score * 1.0  # High confidence if score is high
+            render_priority = weight * score * (1.0 / st_ont)  # Scaled priority
             strengths.append({
                 "label": label,
                 "score": score,
@@ -300,6 +305,16 @@ def build_evidence_bank():
         print("Joined Integrity Features.")
     except FileNotFoundError:
         print("integrity_features.parquet not found, continuing without Phase 4 signals.")
+        
+    try:
+        pool_df = pl.read_parquet(os.path.join(PHASE06_ARTIFACTS, "retrieval_pool.parquet"))
+        # Drop intersecting columns except ID before join
+        drop_cols = [c for c in pool_df.columns if c in df.columns and c != "candidate_id"]
+        pool_df = pool_df.drop(drop_cols)
+        df = df.join(pool_df, on="candidate_id", how="left")
+        print("Joined Phase 6 Retrieval Pool (Coverage Metrics).")
+    except FileNotFoundError:
+        print("retrieval_pool.parquet not found, continuing without Phase 6 coverage signals.")
         
     # Fill missing values gracefully
     df = df.fill_null(0.0)
