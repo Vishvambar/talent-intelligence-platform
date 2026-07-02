@@ -21,13 +21,23 @@ def verify_runtime():
     )
     
     peak_ram = 0
+    total_ram = 0
+    total_cpu = 0
+    measurements = 0
     
     while process.poll() is None:
         try:
             p = psutil.Process(process.pid)
             mem = p.memory_info().rss / (1024 * 1024) # MB
+            cpu = p.cpu_percent(interval=None)
+            
             if mem > peak_ram:
                 peak_ram = mem
+                
+            total_ram += mem
+            total_cpu += cpu
+            measurements += 1
+            
         except psutil.NoSuchProcess:
             break
         time.sleep(0.1)
@@ -44,8 +54,13 @@ def verify_runtime():
         print("--- ERRORS ---")
         print(stderr)
         
+    avg_ram = total_ram / max(1, measurements)
+    avg_cpu = total_cpu / max(1, measurements)
+        
     print(f"\n✅ Total Runtime: {duration:.2f} seconds")
     print(f"✅ Peak RAM Usage: {peak_ram:.2f} MB")
+    print(f"✅ Average RAM Usage: {avg_ram:.2f} MB")
+    print(f"✅ Average CPU Usage: {avg_cpu:.1f} %")
     
     if duration > 300:
         print("❌ FAILED: Runtime exceeds 5-minute constraint.")

@@ -73,6 +73,17 @@ def audit_submission():
         
         if r != r.strip():
             raise ValueError("❌ FAILED: Trailing or leading whitespace detected in reasoning.")
+
+    # 7. Candidate ID Existence Check
+    try:
+        source_df = pl.read_parquet("data/artifacts/phase03/candidate_features.parquet", columns=["candidate_id"])
+        source_ids = set(source_df["candidate_id"].to_list())
+        for cid in df["candidate_id"]:
+            if cid not in source_ids:
+                raise ValueError(f"❌ FAILED: Candidate ID {cid} not found in source dataset!")
+        print("✅ Candidate ID existence verified.")
+    except FileNotFoundError:
+        print("⚠️ WARNING: candidate_features.parquet not found. Skipping ID existence check.")
             
     print("✅ All Phase 11.5 Safety Checks PASSED. The CSV is ready for Redrob.")
 
