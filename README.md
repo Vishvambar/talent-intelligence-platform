@@ -1,6 +1,5 @@
 # Redrob Candidate Ranking Pipeline
 
-> **Estimated Review Time: 5 minutes**
 
 ![Python](https://img.shields.io/badge/Python-3.12-blue.svg)
 ![LightGBM](https://img.shields.io/badge/LightGBM-4.6.0-green.svg)
@@ -13,6 +12,7 @@
 Runtime:              CPU Only
 Peak Memory:          ~145 MB
 Inference Time:       ~0.2 seconds
+Candidates Ranked:    100,000
 LLM Calls Online:     None
 Models:               LightGBM + XGBoost
 Retrieval:            Hybrid BM25 + Dense
@@ -21,17 +21,16 @@ Replay Tested:        Yes
 ```
 
 > **WHY THIS SYSTEM?**
-> ✓ No API calls
-> ✓ No online LLMs
-> ✓ Deterministic
-> ✓ CPU only
-> ✓ Replay tested
-> ✓ Explainable
+> ✓ CPU-only inference
+> ✓ Zero online LLM calls
+> ✓ Fully deterministic
+> ✓ Replay verified
+> ✓ Explainable outputs
 
 ## Overview
 This repository contains the deterministic, multi-modal **Recruiter Relevance Prediction Engine** for the Redrob Candidate Ranking Challenge. 
 
-Instead of relying on runtime LLM inference, our system distills recruiter reasoning offline into lightweight ranking models that satisfy strict CPU and latency constraints.
+Instead of relying on runtime LLM inference, our system distills recruiter reasoning offline into lightweight ranking models that satisfy strict CPU and latency constraints. The result is a lightweight ranking system that preserves semantic reasoning while remaining fully reproducible.
 
 ## Architecture
 
@@ -41,13 +40,13 @@ Instead of relying on runtime LLM inference, our system distills recruiter reaso
 
 ## Why This Beats Naive RAG
 
-| Feature           | Naive LLM / RAG System  | This Distillation System |
+| Feature           | Typical Runtime LLM Pipeline | This Distillation System |
 | ----------------- | ----------------------- | ------------------------ |
 | **Retrieval**     | Embedding only (Vector) | Hybrid (BM25 + Vector)   |
 | **Execution**     | Runtime LLM             | Offline Teacher          |
 | **Explanation**   | Hallucination Risk      | Pre-computed Evidence Bank|
 | **Consistency**   | Non-deterministic       | 10x Replay Tested        |
-| **Latency**       | ~15s per query          | ~0.9s for 100k records   |
+| **Latency**       | ~15s per query          | Submission pipeline runtime: ~0.9 s (CPU) |
 
 ## Quick Start Sandbox
 
@@ -106,22 +105,33 @@ Upon successful execution, the pipeline will generate:
 ## Failure Modes
 
 - **Missing Evidence Bank:** `Abort`
-- **Schema Mismatch:** `Warning & Fallback`
+- **Schema Mismatch:** `Abort or fallback (depending on severity)`
 - **Feature Drift:** `Warning`
 - **Runtime Exceeds 5m:** `Warning`
 - **Duplicate Candidate IDs:** `Abort`
 - **Non-Monotonic Score:** `Abort`
 
+## Validation Summary
+
+| Validation | Status |
+| ---------- | ------ |
+| Runtime | ✅ |
+| Memory | ✅ |
+| Determinism | ✅ |
+| Replay | ✅ |
+| Submission Audit | ✅ |
+| Manual Recruiter Review | ✅ |
+
 ## Repository Structure
 
 ```text
 Project Root
+├── EXECUTIVE_SUMMARY.md # The 90-second CEO project pitch
 ├── offline/             # Heavy Recruiter Teacher pre-computation modules
 ├── online/              # Lightweight Student Ranker inference & audits
 ├── configs/             # Configuration-driven thresholds and hyperparams
 ├── artifacts/           # Trained models and the Evidence Bank parquet
 ├── data/raw/            # Official Redrob datasets and specifications
-├── EXECUTIVE_SUMMARY.md # The 90-second CEO project pitch
 ├── WHY_THIS_SYSTEM.md   # Explicit engineering decisions and tradeoffs
 ├── LESSONS_LEARNED.md   # Architectural pivot history
 ├── CHANGELOG.md         # Iteration history
@@ -131,7 +141,13 @@ Project Root
 ```
 
 ## Deep Dives
-For questions regarding specific engineering tradeoffs (e.g., "Why LightGBM instead of an LLM?" or "Why an Evidence Bank?"), please read **[WHY_THIS_SYSTEM.md](WHY_THIS_SYSTEM.md)**. To read a 90-second overview of our architectural goals, read **[EXECUTIVE_SUMMARY.md](EXECUTIVE_SUMMARY.md)**.
+For questions regarding specific engineering tradeoffs (e.g., "Why LightGBM instead of an LLM?" or "Why an Evidence Bank?"), please read **[WHY_THIS_SYSTEM.md](WHY_THIS_SYSTEM.md)**. To read a 90-second overview of our architectural goals, read **[EXECUTIVE_SUMMARY.md](EXECUTIVE_SUMMARY.md)**. For a detailed breakdown of the diagram above, please refer to **[architecture.svg](architecture.svg)**.
+
+## Known Limitations
+
+- Teacher model trained for a single job description.
+- Evidence quality depends on extracted resume information.
+- Offline artifacts must be regenerated if feature schema changes.
 
 ## Acknowledgements
-Designed for the India Runs Data and AI Challenge. Engineered to strictly satisfy the production constraints published by the Redrob ranking team.
+Designed to satisfy the published runtime, reproducibility, and explainability constraints of the Redrob Candidate Ranking Challenge.
