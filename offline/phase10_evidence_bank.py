@@ -16,8 +16,10 @@ CONFIG_PATH = "offline/phase10_config.json"
 def load_config():
     try:
         with open(CONFIG_PATH, "r") as f:
+            print(f"Loaded configuration from {CONFIG_PATH}")
             return json.load(f)
     except FileNotFoundError:
+        print("Using fallback configuration (file not found)")
         return {
             "gap_threshold": 0.20,
             "jd_weights": {
@@ -44,7 +46,7 @@ FEATURE_LABELS = {
 def compute_hash(payload: dict) -> str:
     # Deterministic hash of the core evidence payload
     s = json.dumps(payload, sort_keys=True)
-    return hashlib.md5(s.encode("utf-8")).hexdigest()
+    return hashlib.sha256(s.encode("utf-8")).hexdigest()
 
 def generate_evidence_components(row: dict) -> dict:
     cid = row.get("candidate_id")
@@ -59,7 +61,11 @@ def generate_evidence_components(row: dict) -> dict:
         "Vector/Data Systems": float(row.get("vector_db_score", 0.0)),
         "Backend/AI Engineering": 0.1  # Base default
     }
-    primary_domain = max(scores, key=scores.get)
+    sorted_domains = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+    if sorted_domains[0][1] - sorted_domains[1][1] < 0.05 and sorted_domains[1][1] > 0.2:
+        primary_domain = f"{sorted_domains[0][0]} & {sorted_domains[1][0]}"
+    else:
+        primary_domain = sorted_domains[0][0]
     
     # Seniority Bands
     seniority = "Junior"
@@ -99,7 +105,8 @@ def generate_evidence_components(row: dict) -> dict:
         strengths.append({
             "label": f"Matched {int(tech_cov * 100)}% technical priorities",
             "score": tech_cov,
-            "render_priority": tech_cov * 1.5  # Boost priority for holistic coverage
+            "render_priority": tech_cov * 1.5,
+            "feature_name": "technical_coverage"
         })
         
     biz_cov = float(row.get("business_coverage", 0.0))
@@ -107,7 +114,8 @@ def generate_evidence_components(row: dict) -> dict:
         strengths.append({
             "label": f"Matched {int(biz_cov * 100)}% business priorities",
             "score": biz_cov,
-            "render_priority": biz_cov * 1.2
+            "render_priority": biz_cov * 1.2,
+            "feature_name": "business_coverage"
         })
         
     beh_cov = float(row.get("behavioral_coverage", 0.0))
@@ -115,7 +123,8 @@ def generate_evidence_components(row: dict) -> dict:
         strengths.append({
             "label": f"Matched {int(beh_cov * 100)}% behavioral priorities",
             "score": beh_cov,
-            "render_priority": beh_cov * 1.2
+            "render_priority": beh_cov * 1.2,
+            "feature_name": "behavioral_coverage"
         })
         
     for feat, label in FEATURE_LABELS.items():
@@ -128,7 +137,8 @@ def generate_evidence_components(row: dict) -> dict:
             strengths.append({
                 "label": label,
                 "score": score,
-                "render_priority": render_priority
+                "render_priority": render_priority,
+                "feature_name": feat
             })
         elif score < gap_threshold:
             # Gap
@@ -136,7 +146,8 @@ def generate_evidence_components(row: dict) -> dict:
             gaps.append({
                 "label": label,
                 "score": score,
-                "render_priority": render_priority
+                "render_priority": render_priority,
+                "feature_name": feat
             })
             
     # Sort by render priority descending
@@ -192,6 +203,13 @@ def generate_evidence_components(row: dict) -> dict:
         })
         
     risks = sorted(risks, key=lambda x: x["render_priority"], reverse=True)
+    for r in risks:
+        if r["render_priority"] >= 0.8:
+            r["severity"] = "High"
+        elif r["render_priority"] >= 0.4:
+            r["severity"] = "Medium"
+        else:
+            r["severity"] = "Low"
     
     # 4. SUPPORTING EVIDENCE (Structured)
     evidence = []
@@ -202,7 +220,8 @@ def generate_evidence_components(row: dict) -> dict:
             "label": "Leadership Growth",
             "value": f"{int(promos)} promotions",
             "grounding_confidence": min(1.0, 0.70 + (promos * 0.10)),
-            "source": "career_history"
+            "source": "career_history",
+            "feature_name": "promotion_count"
         })
         
     edu_tier = float(row.get("education_tier_score", 0.0))
@@ -212,7 +231,8 @@ def generate_evidence_components(row: dict) -> dict:
             "label": "Strong Educational Foundation",
             "value": "Tier-1/2 Institution",
             "grounding_confidence": edu_tier,
-            "source": "education"
+            "source": "education",
+            "feature_name": "education_tier_score"
         })
         
     if float(row.get("founding_team_score", 0.0)) > 0.5:
@@ -221,7 +241,8 @@ def generate_evidence_components(row: dict) -> dict:
             "label": "Startup Velocity",
             "value": "Founding/Early Team Experience",
             "grounding_confidence": float(row.get("founding_team_score", 0.0)),
-            "source": "career_history"
+            "source": "career_history",
+            "feature_name": "founding_team_score"
         })
         
     # Compute overall grounding confidence
@@ -296,26 +317,43 @@ def build_evidence_bank():
         "total_processed": 0,
         "avg_evidence_count": 0.0,
         "avg_grounding_confidence": 0.0,
+        "avg_strengths_per_candidate": 0.0,
+        "avg_gaps_per_candidate": 0.0,
+        "avg_risks_per_candidate": 0.0,
+        "pct_no_evidence": 0.0,
+        "pct_gt3_evidence": 0.0,
         "top_strengths": {},
         "top_gaps": {},
         "top_risks": {}
     }
     
     evidence_counts = []
+    strength_counts = []
+    gap_counts = []
+    risk_counts = []
     confidences = []
     
     for row in tqdm(row_dicts, desc="Synthesizing Evidence"):
         evidence = generate_evidence_components(row)
-        
-        # We store the entire JSON as a string column for O(1) loading and minimal schema issues
+        # Store structured columns natively
         evidence_records.append({
             "candidate_id": row["candidate_id"],
-            "evidence_payload": json.dumps(evidence)
+            "summary": json.dumps(evidence["summary_components"]),
+            "strengths": json.dumps(evidence["strengths"]),
+            "gaps": json.dumps(evidence["gaps"]),
+            "risks": json.dumps(evidence["risks"]),
+            "supporting_evidence": json.dumps(evidence["supporting_evidence"]),
+            "metadata": json.dumps(evidence["metadata"]),
+            "grounding_confidence": evidence["grounding_confidence"]
         })
         
         # Accumulate Stats
         stats["total_processed"] += 1
-        evidence_counts.append(len(evidence["supporting_evidence"]))
+        num_evidence = len(evidence["supporting_evidence"])
+        evidence_counts.append(num_evidence)
+        strength_counts.append(len(evidence["strengths"]))
+        gap_counts.append(len(evidence["gaps"]))
+        risk_counts.append(len(evidence["risks"]))
         confidences.append(evidence["grounding_confidence"])
         
         if evidence["strengths"]:
@@ -331,8 +369,18 @@ def build_evidence_bank():
             stats["top_risks"][top_r] = stats["top_risks"].get(top_r, 0) + 1
             
     # Finalize Stats
+    total = stats["total_processed"]
     stats["avg_evidence_count"] = float(np.mean(evidence_counts))
     stats["avg_grounding_confidence"] = float(np.mean(confidences))
+    stats["avg_strengths_per_candidate"] = float(np.mean(strength_counts))
+    stats["avg_gaps_per_candidate"] = float(np.mean(gap_counts))
+    stats["avg_risks_per_candidate"] = float(np.mean(risk_counts))
+    
+    no_ev = sum(1 for c in evidence_counts if c == 0)
+    gt3_ev = sum(1 for c in evidence_counts if c > 3)
+    stats["pct_no_evidence"] = round((no_ev / total) * 100, 1) if total > 0 else 0.0
+    stats["pct_gt3_evidence"] = round((gt3_ev / total) * 100, 1) if total > 0 else 0.0
+    
     stats["template_version"] = "v1.1"
     stats["ontology_version"] = "v2.0"
     
