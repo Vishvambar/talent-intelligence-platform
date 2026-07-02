@@ -1,119 +1,206 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="100%" height="100%">
-  <!-- Definitions for gradients and shadows -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" width="100%" height="100%">
   <defs>
-    <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+    <!-- Background Gradients -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#f8f9fa"/>
       <stop offset="100%" stop-color="#e9ecef"/>
     </linearGradient>
-    <linearGradient id="box-gradient-offline" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#4facfe"/>
-      <stop offset="100%" stop-color="#00f2fe"/>
+    
+    <!-- Zone Gradients -->
+    <linearGradient id="offline-zone" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#e3f2fd" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#bbdefb" stop-opacity="0.6"/>
     </linearGradient>
-    <linearGradient id="box-gradient-online" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#43e97b"/>
-      <stop offset="100%" stop-color="#38f9d7"/>
+    <linearGradient id="artifact-zone" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f3e5f5" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#e1bee7" stop-opacity="0.6"/>
     </linearGradient>
-    <linearGradient id="box-gradient-artifact" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#fa709a"/>
-      <stop offset="100%" stop-color="#fee140"/>
+    <linearGradient id="online-zone" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#e8f5e9" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#c8e6c9" stop-opacity="0.6"/>
     </linearGradient>
-    <filter id="drop-shadow" x="-10%" y="-10%" width="130%" height="130%">
-      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.1"/>
+
+    <!-- Box Gradients -->
+    <linearGradient id="box-blue" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1976d2"/>
+      <stop offset="100%" stop-color="#42a5f5"/>
+    </linearGradient>
+    <linearGradient id="box-purple" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7b1fa2"/>
+      <stop offset="100%" stop-color="#ab47bc"/>
+    </linearGradient>
+    <linearGradient id="box-green" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2e7d32"/>
+      <stop offset="100%" stop-color="#66bb6a"/>
+    </linearGradient>
+    <linearGradient id="box-orange" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f57c00"/>
+      <stop offset="100%" stop-color="#ffa726"/>
+    </linearGradient>
+
+    <!-- Shadows & Filters -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.15"/>
     </filter>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+
+    <!-- Arrow Marker -->
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#78909c"/>
+    </marker>
   </defs>
 
-  <!-- Background -->
-  <rect width="800" height="1000" fill="url(#bg-gradient)" rx="16"/>
+  <!-- Base Canvas -->
+  <rect width="1200" height="700" fill="url(#bg)" rx="16"/>
 
-  <!-- Title -->
-  <text x="400" y="80" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="32" font-weight="bold" fill="#212529" text-anchor="middle">Redrob Candidate Ranking Pipeline</text>
-  <text x="400" y="115" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="18" fill="#6c757d" text-anchor="middle">Knowledge Distillation Architecture</text>
+  <!-- Main Title -->
+  <text x="600" y="50" font-family="sans-serif" font-size="28" font-weight="bold" fill="#263238" text-anchor="middle">Redrob Pipeline Architecture: Offline Teacher &amp; Online Student</text>
+  <text x="600" y="75" font-family="sans-serif" font-size="16" fill="#546e7a" text-anchor="middle">Decoupling Heavy NLP from Strict CPU Inference via Knowledge Distillation</text>
 
-  <!-- Zones -->
-  <!-- Offline Zone -->
-  <rect x="50" y="160" width="320" height="580" fill="#ffffff" fill-opacity="0.6" rx="12" stroke="#dee2e6" stroke-dasharray="8 4"/>
-  <text x="210" y="200" font-family="sans-serif" font-size="20" font-weight="bold" fill="#495057" text-anchor="middle">Offline (Heavy Compute)</text>
-
-  <!-- Online Zone -->
-  <rect x="430" y="160" width="320" height="580" fill="#ffffff" fill-opacity="0.6" rx="12" stroke="#dee2e6" stroke-dasharray="8 4"/>
-  <text x="590" y="200" font-family="sans-serif" font-size="20" font-weight="bold" fill="#495057" text-anchor="middle">Online (CPU Inference)</text>
-
-  <!-- Boxes (Offline) -->
-  <g transform="translate(110, 240)">
-    <rect width="200" height="60" rx="8" fill="url(#box-gradient-offline)" filter="url(#drop-shadow)"/>
-    <text x="100" y="36" font-family="sans-serif" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">Raw Resumes &amp; JDs</text>
-  </g>
-
-  <g transform="translate(110, 360)">
-    <rect width="200" height="60" rx="8" fill="url(#box-gradient-offline)" filter="url(#drop-shadow)"/>
-    <text x="100" y="36" font-family="sans-serif" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">Hybrid Retrieval</text>
-  </g>
-
-  <g transform="translate(110, 480)">
-    <rect width="200" height="60" rx="8" fill="url(#box-gradient-offline)" filter="url(#drop-shadow)"/>
-    <text x="100" y="36" font-family="sans-serif" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">Recruiter Teacher</text>
-  </g>
-
-  <g transform="translate(110, 600)">
-    <rect width="200" height="60" rx="8" fill="url(#box-gradient-offline)" filter="url(#drop-shadow)"/>
-    <text x="100" y="36" font-family="sans-serif" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">Evidence Generator</text>
-  </g>
-
-  <!-- Connecting Lines (Offline) -->
-  <path d="M 210 300 L 210 350" stroke="#adb5bd" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
-  <path d="M 210 420 L 210 470" stroke="#adb5bd" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
-  <path d="M 210 540 L 210 590" stroke="#adb5bd" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
-
-  <!-- Middle Bridge -->
-  <g transform="translate(300, 780)">
-    <rect width="200" height="80" rx="8" fill="url(#box-gradient-artifact)" filter="url(#drop-shadow)"/>
-    <text x="100" y="36" font-family="sans-serif" font-size="16" font-weight="bold" fill="#ffffff" text-anchor="middle">Distilled Artifacts</text>
-    <text x="100" y="56" font-family="sans-serif" font-size="14" fill="#ffffff" text-anchor="middle">(Features &amp; Evidence)</text>
-  </g>
+  <!-- ==================== ZONES ==================== -->
   
-  <path d="M 210 660 L 210 720 L 400 720 L 400 770" stroke="#fa709a" stroke-width="4" fill="none" marker-end="url(#arrow-pink)"/>
-  <path d="M 400 770 L 400 720 L 590 720 L 590 660" stroke="#fa709a" stroke-width="4" fill="none" marker-end="url(#arrow-pink-up)"/>
+  <!-- Zone 1: Raw Data -->
+  <rect x="30" y="120" width="220" height="520" fill="#ffffff" fill-opacity="0.7" rx="12" stroke="#cfd8dc" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="140" y="150" font-family="sans-serif" font-size="18" font-weight="bold" fill="#455a64" text-anchor="middle">1. Data Sources</text>
+  
+  <!-- Zone 2: Offline Pipeline -->
+  <rect x="280" y="120" width="300" height="520" fill="url(#offline-zone)" rx="12" stroke="#90caf9" stroke-width="2"/>
+  <text x="430" y="150" font-family="sans-serif" font-size="18" font-weight="bold" fill="#1565c0" text-anchor="middle">2. Offline Distillation (GPU)</text>
+  <text x="430" y="170" font-family="sans-serif" font-size="12" fill="#1565c0" text-anchor="middle">Unconstrained Runtime (~4 Hours)</text>
 
-  <!-- Boxes (Online) -->
-  <g transform="translate(490, 600)">
-    <rect width="200" height="60" rx="8" fill="url(#box-gradient-online)" filter="url(#drop-shadow)"/>
-    <text x="100" y="36" font-family="sans-serif" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">Student Ranker</text>
+  <!-- Zone 3: Artifacts Bridge -->
+  <rect x="610" y="120" width="220" height="520" fill="url(#artifact-zone)" rx="12" stroke="#ce93d8" stroke-width="2"/>
+  <text x="720" y="150" font-family="sans-serif" font-size="18" font-weight="bold" fill="#6a1b9a" text-anchor="middle">3. Static Artifacts</text>
+  <text x="720" y="170" font-family="sans-serif" font-size="12" fill="#6a1b9a" text-anchor="middle">Pre-computed Parquet &amp; PKL</text>
+
+  <!-- Zone 4: Online Inference -->
+  <rect x="860" y="120" width="310" height="520" fill="url(#online-zone)" rx="12" stroke="#a5d6a7" stroke-width="2"/>
+  <text x="1015" y="150" font-family="sans-serif" font-size="18" font-weight="bold" fill="#2e7d32" text-anchor="middle">4. Online Inference (CPU)</text>
+  <text x="1015" y="170" font-family="sans-serif" font-size="12" fill="#2e7d32" text-anchor="middle">Constrained (~0.9s, &lt;16GB RAM)</text>
+
+  <!-- ==================== BOXES ==================== -->
+  <!-- Helper Macro for boxes: 
+       <g transform="translate(x, y)">
+         <rect width="w" height="h" />
+         <text... />
+       </g>
+  -->
+
+  <!-- ZONE 1 BOXES -->
+  <g transform="translate(50, 260)" filter="url(#shadow)">
+    <rect width="180" height="70" rx="6" fill="url(#box-orange)"/>
+    <text x="90" y="30" font-family="sans-serif" font-size="16" font-weight="bold" fill="#fff" text-anchor="middle">Job Description</text>
+    <text x="90" y="50" font-family="sans-serif" font-size="12" fill="#fff" text-anchor="middle">(Ontology Constraints)</text>
   </g>
 
-  <g transform="translate(490, 480)">
-    <rect width="200" height="60" rx="8" fill="url(#box-gradient-online)" filter="url(#drop-shadow)"/>
-    <text x="100" y="36" font-family="sans-serif" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">Elite Re-Ranker</text>
+  <g transform="translate(50, 420)" filter="url(#shadow)">
+    <rect width="180" height="70" rx="6" fill="url(#box-orange)"/>
+    <text x="90" y="30" font-family="sans-serif" font-size="16" font-weight="bold" fill="#fff" text-anchor="middle">Candidate Pool</text>
+    <text x="90" y="50" font-family="sans-serif" font-size="12" fill="#fff" text-anchor="middle">(100,000 JSON Resumes)</text>
   </g>
 
-  <g transform="translate(490, 360)">
-    <rect width="200" height="60" rx="8" fill="url(#box-gradient-online)" filter="url(#drop-shadow)"/>
-    <text x="100" y="36" font-family="sans-serif" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">Reasoning Renderer</text>
+  <!-- ZONE 2 BOXES (OFFLINE) -->
+  <g transform="translate(300, 220)" filter="url(#shadow)">
+    <rect width="260" height="70" rx="6" fill="url(#box-blue)"/>
+    <text x="130" y="25" font-family="sans-serif" font-size="16" font-weight="bold" fill="#fff" text-anchor="middle">Hybrid Retrieval Engine</text>
+    <text x="130" y="45" font-family="sans-serif" font-size="12" fill="#fff" text-anchor="middle">Dense Vector (E5) + Lexical (BM25)</text>
+    <text x="130" y="60" font-family="sans-serif" font-size="10" fill="#bbdefb" text-anchor="middle">Matches skills mathematically</text>
   </g>
 
-  <g transform="translate(490, 240)">
-    <rect width="200" height="60" rx="8" fill="url(#box-gradient-online)" filter="url(#drop-shadow)"/>
-    <text x="100" y="36" font-family="sans-serif" font-size="18" font-weight="bold" fill="#ffffff" text-anchor="middle">submission.csv</text>
+  <g transform="translate(300, 340)" filter="url(#shadow)">
+    <rect width="260" height="70" rx="6" fill="url(#box-blue)"/>
+    <text x="130" y="25" font-family="sans-serif" font-size="16" font-weight="bold" fill="#fff" text-anchor="middle">Recruiter Teacher (LLM)</text>
+    <text x="130" y="45" font-family="sans-serif" font-size="12" fill="#fff" text-anchor="middle">Heavy Semantic Feature Extraction</text>
+    <text x="130" y="60" font-family="sans-serif" font-size="10" fill="#bbdefb" text-anchor="middle">Parses trajectory &amp; business logic</text>
   </g>
 
-  <!-- Connecting Lines (Online - Upward Flow) -->
-  <path d="M 590 590 L 590 550" stroke="#adb5bd" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
-  <path d="M 590 470 L 590 430" stroke="#adb5bd" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
-  <path d="M 590 350 L 590 310" stroke="#adb5bd" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
+  <g transform="translate(300, 460)" filter="url(#shadow)">
+    <rect width="260" height="70" rx="6" fill="url(#box-blue)"/>
+    <text x="130" y="25" font-family="sans-serif" font-size="16" font-weight="bold" fill="#fff" text-anchor="middle">Evidence Bank Generator</text>
+    <text x="130" y="45" font-family="sans-serif" font-size="12" fill="#fff" text-anchor="middle">Synthesizes Natural Language</text>
+    <text x="130" y="60" font-family="sans-serif" font-size="10" fill="#bbdefb" text-anchor="middle">Pre-computes final explanation strings</text>
+  </g>
 
-  <!-- Markers -->
-  <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#adb5bd"/>
-    </marker>
-    <marker id="arrow-pink" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#fa709a"/>
-    </marker>
-    <marker id="arrow-pink-up" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#fa709a"/>
-    </marker>
-  </defs>
+  <g transform="translate(300, 560)" filter="url(#shadow)">
+    <rect width="260" height="50" rx="6" fill="#455a64"/>
+    <text x="130" y="22" font-family="sans-serif" font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">Teacher Training (Label Gen)</text>
+    <text x="130" y="40" font-family="sans-serif" font-size="11" fill="#cfd8dc" text-anchor="middle">Trains the tabular ensemble models</text>
+  </g>
 
-  <!-- Footer -->
-  <text x="400" y="950" font-family="sans-serif" font-size="14" fill="#ced4da" text-anchor="middle">100% Deterministic | Zero Online LLM Calls | 0.9s Runtime</text>
+  <!-- ZONE 3 BOXES (ARTIFACTS) -->
+  <g transform="translate(630, 270)" filter="url(#shadow)">
+    <rect width="180" height="60" rx="6" fill="url(#box-purple)"/>
+    <text x="90" y="25" font-family="sans-serif" font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">inference_features.parquet</text>
+    <text x="90" y="45" font-family="sans-serif" font-size="12" fill="#e1bee7" text-anchor="middle">100k Rows x 23 Columns</text>
+  </g>
+
+  <g transform="translate(630, 400)" filter="url(#shadow)">
+    <rect width="180" height="60" rx="6" fill="url(#box-purple)"/>
+    <text x="90" y="25" font-family="sans-serif" font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">evidence_bank.parquet</text>
+    <text x="90" y="45" font-family="sans-serif" font-size="12" fill="#e1bee7" text-anchor="middle">100k Pre-written Reasons</text>
+  </g>
+
+  <g transform="translate(630, 530)" filter="url(#shadow)">
+    <rect width="180" height="60" rx="6" fill="url(#box-purple)"/>
+    <text x="90" y="25" font-family="sans-serif" font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">Trained Models (.pkl)</text>
+    <text x="90" y="45" font-family="sans-serif" font-size="12" fill="#e1bee7" text-anchor="middle">LightGBM + XGBoost</text>
+  </g>
+
+  <!-- ZONE 4 BOXES (ONLINE) -->
+  <g transform="translate(880, 240)" filter="url(#shadow)">
+    <rect width="270" height="70" rx="6" fill="url(#box-green)"/>
+    <text x="135" y="25" font-family="sans-serif" font-size="16" font-weight="bold" fill="#fff" text-anchor="middle">Student Ranker (LGBM+XGB)</text>
+    <text x="135" y="45" font-family="sans-serif" font-size="12" fill="#fff" text-anchor="middle">Deterministic Tabular Inference</text>
+    <text x="135" y="60" font-family="sans-serif" font-size="10" fill="#c8e6c9" text-anchor="middle">Applies blended weights</text>
+  </g>
+
+  <g transform="translate(880, 360)" filter="url(#shadow)">
+    <rect width="270" height="70" rx="6" fill="url(#box-green)"/>
+    <text x="135" y="25" font-family="sans-serif" font-size="16" font-weight="bold" fill="#fff" text-anchor="middle">Elite Re-Ranker</text>
+    <text x="135" y="45" font-family="sans-serif" font-size="12" fill="#fff" text-anchor="middle">Business Logic Gate</text>
+    <text x="135" y="60" font-family="sans-serif" font-size="10" fill="#c8e6c9" text-anchor="middle">Resorts Top 50 by Hybrid Integrity</text>
+  </g>
+
+  <g transform="translate(880, 480)" filter="url(#shadow)">
+    <rect width="270" height="70" rx="6" fill="url(#box-green)"/>
+    <text x="135" y="25" font-family="sans-serif" font-size="16" font-weight="bold" fill="#fff" text-anchor="middle">Reasoning Renderer</text>
+    <text x="135" y="45" font-family="sans-serif" font-size="12" fill="#fff" text-anchor="middle">Evidence Bank Lookup (O(1))</text>
+    <text x="135" y="60" font-family="sans-serif" font-size="10" fill="#c8e6c9" text-anchor="middle">Appends explanations without LLM calls</text>
+  </g>
+
+  <g transform="translate(880, 580)" filter="url(#glow)">
+    <rect width="270" height="50" rx="6" fill="#212121"/>
+    <text x="135" y="22" font-family="monospace" font-size="16" font-weight="bold" fill="#00e676" text-anchor="middle">submission.csv</text>
+    <text x="135" y="40" font-family="sans-serif" font-size="12" fill="#9e9e9e" text-anchor="middle">Final 100 Candidates (Rank, Score, Reason)</text>
+  </g>
+
+  <!-- ==================== CONNECTING LINES ==================== -->
+  
+  <!-- Zone 1 to Zone 2 -->
+  <path d="M 230 295 L 265 295 L 265 255 L 290 255" fill="none" stroke="#78909c" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M 230 455 L 265 455 L 265 275 L 290 275" fill="none" stroke="#78909c" stroke-width="3" marker-end="url(#arrow)"/>
+  
+  <!-- Zone 2 Internal Flow -->
+  <path d="M 430 290 L 430 330" fill="none" stroke="#78909c" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M 430 410 L 430 450" fill="none" stroke="#78909c" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M 430 530 L 430 550" fill="none" stroke="#78909c" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- Zone 2 to Zone 3 (Writing Artifacts) -->
+  <path d="M 560 375 L 595 375 L 595 300 L 620 300" fill="none" stroke="#78909c" stroke-width="3" marker-end="url(#arrow)"/> <!-- To Features -->
+  <path d="M 560 495 L 595 495 L 595 430 L 620 430" fill="none" stroke="#78909c" stroke-width="3" marker-end="url(#arrow)"/> <!-- To Evidence -->
+  <path d="M 560 585 L 595 585 L 595 560 L 620 560" fill="none" stroke="#78909c" stroke-width="3" marker-end="url(#arrow)"/> <!-- To Models -->
+
+  <!-- Zone 3 to Zone 4 (Reading Artifacts for Inference) -->
+  <path d="M 810 300 L 845 300 L 845 265 L 870 265" fill="none" stroke="#78909c" stroke-width="3" marker-end="url(#arrow)"/> <!-- Features to Ranker -->
+  <path d="M 810 560 L 845 560 L 845 285 L 870 285" fill="none" stroke="#78909c" stroke-width="3" marker-end="url(#arrow)"/> <!-- Models to Ranker -->
+  <path d="M 810 430 L 845 430 L 845 515 L 870 515" fill="none" stroke="#78909c" stroke-width="3" marker-end="url(#arrow)"/> <!-- Evidence to Renderer -->
+
+  <!-- Zone 4 Internal Flow -->
+  <path d="M 1015 310 L 1015 350" fill="none" stroke="#78909c" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M 1015 430 L 1015 470" fill="none" stroke="#78909c" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M 1015 550 L 1015 570" fill="none" stroke="#78909c" stroke-width="3" marker-end="url(#arrow)"/>
 
 </svg>
