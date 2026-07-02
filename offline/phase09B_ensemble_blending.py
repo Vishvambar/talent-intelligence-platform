@@ -97,7 +97,7 @@ def run_ensemble_blending():
     best_map_score = -1
     best_map_blend = 0.0
     
-    for w in np.arange(0.0, 1.05, 0.05):
+    for w in np.arange(0.0, 1.01, 0.01):
         w = round(w, 2)
         blend_scores = w * l_norm + (1 - w) * x_norm
         
@@ -184,15 +184,30 @@ def run_ensemble_blending():
         pickle.dump(scaler_xgb, f)
         
     # Save Elite Formula for Phase 11
+    # Determine valid features based on actual dataset schema
+    valid_features = {"ensemble_score": 0.70}
+    
+    if "retrieval_strength" in df.columns:
+        valid_features["retrieval_strength"] = 0.20
+    elif "retrieval_score" in df.columns:
+        valid_features["retrieval_score"] = 0.20
+        
+    if "dense_consensus_score" in df.columns:
+        valid_features["dense_consensus_score"] = 0.20
+    elif "vector_db_score" in df.columns:
+        valid_features["vector_db_score"] = 0.20
+        
+    if "technical_coverage" in df.columns:
+        valid_features["technical_coverage"] = 0.20
+    elif "evaluation_score" in df.columns:
+        valid_features["evaluation_score"] = 0.20
+        
+    if "integrity_score" in df.columns:
+        valid_features["integrity_score"] = 0.10
+
     elite_formula = {
         "elite_pool_size": 50,
-        "features": {
-            "ensemble_score": 0.70,
-            "retrieval_score": 0.20,
-            "vector_db_score": 0.20,
-            "evaluation_score": 0.20,
-            "integrity_score": 0.10
-        },
+        "features": valid_features,
         "description": "Notice technical scores are summed before multiplying by 0.20 in run_ranking.py. This formula config replaces hardcoded values."
     }
     with open(os.path.join(OUTPUT_DIR, "elite_formula.json"), "w") as f:

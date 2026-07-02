@@ -74,6 +74,8 @@ def train_xgb_ranker():
         # [KNOWN LIMITATION]: Single-query ranking.
         # We only have one recruiter (one JD) in this pipeline, meaning all 1000 candidates 
         # belong to a single search query. XGBRanker uses group=[len(X_t)] to represent this single query.
+        # This means fold metrics (like NDCG@10) will have relatively high variance because each validation 
+        # split is treated as its own small query. Interpret CV numbers with caution.
         # Future extension: Multiple recruiter datasets.
         model = xgb.XGBRanker(**xgb_params, early_stopping_rounds=20)
         model.fit(X_t, y_t, group=[len(X_t)], eval_set=[(X_v, y_v)], eval_group=[[len(X_v)]], verbose=False)
@@ -99,15 +101,24 @@ def train_xgb_ranker():
     avg_ndcg = float(np.mean(oof_ndcgs))
     print(f"Average Holdout NDCG@10: {avg_ndcg:.4f}")
     
+    # Save OOF predictions and training set predictions
+    df_oof = pl.DataFrame({
+        "candidate_id": df["candidate_id"],
+        "xgb_oof_score": oof_predictions / np.maximum(oof_counts, 1.0)
+    })
+    df_oof.write_parquet(os.path.join(OUTPUT_DIR, "xgb_train_predictions.parquet"))
+    
+    # ---------------------------------------------------------
+    # FINAL FULL TRAINING
+    # ---------------------------------------------------------
+    print("\nTraining final XGBRanker on 100% of data...")
+    
     # Average OOF predictions for any candidates that were validated multiple times
     # If a candidate was never in a validation set, we'll fall back to training score later
     valid_mask = oof_counts > 0
     oof_predictions[valid_mask] /= oof_counts[valid_mask]
     
     # ---------------------------------------------------------
-    # FINAL FULL TRAINING
-    # ---------------------------------------------------------
-    print("\nTraining final XGBRanker on 100% of data...")
     final_params = xgb_params.copy()
     final_params["n_estimators"] = int(np.mean(cv_best_iters))
     

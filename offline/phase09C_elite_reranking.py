@@ -83,17 +83,29 @@ def run_elite_reranking():
         # 1. Base Score
         ens_score = row.get("ensemble_score", 0.0)
         
-        # 2. Graph Quality Math: 0.35 * exp + 0.30 * dens + 0.20 * depth + 0.15 * edge_dens
-        # Simulated if not explicitly present in dataset
-        g_exp = row.get("graph_expansion_ratio", 0.5)
-        g_dens = row.get("graph_density", 0.5)
-        g_dep = row.get("graph_avg_depth", 0.5)
-        g_edge = row.get("graph_edge_density", 0.5)
-        graph_quality = (0.35 * g_exp) + (0.30 * g_dens) + (0.20 * g_dep) + (0.15 * g_edge)
+        # 2. Graph Quality Math (Explicitly disable if features are absent)
+        if "graph_expansion_ratio" in row:
+            g_exp = row.get("graph_expansion_ratio", 0.0)
+            g_dens = row.get("graph_density", 0.0)
+            g_dep = row.get("graph_avg_depth", 0.0)
+            g_edge = row.get("graph_edge_density", 0.0)
+            graph_quality = (0.35 * g_exp) + (0.30 * g_dens) + (0.20 * g_dep) + (0.15 * g_edge)
+        else:
+            graph_quality = 0.0
+            W_TECH += W_GRAPH / 2  # Redistribute unused budget
+            W_INT += W_GRAPH / 2
+            W_GRAPH = 0.0
         
-        # 3. Dynamic Rare Skill Bonus (Simulated IDF math)
-        # IDF(skill) * JD_Priority * Candidate_Match
-        rare_skill = row.get("rare_skill_match_count", 0) * 0.15
+        # 3. Dynamic Rare Skill Bonus (IDF × JD Priority × Candidate Match)
+        if "rare_skill_match_count" in row:
+            simulated_idf = 4.5  # Log(N/n) roughly 4.5 for a rare skill
+            jd_prio = jd_priorities.get("Technical", 0.50)
+            cand_match = row.get("rare_skill_match_count", 0) / 10.0 # Normalized match
+            rare_skill = simulated_idf * jd_prio * cand_match
+        else:
+            rare_skill = 0.0
+            W_TECH += W_RARE
+            W_RARE = 0.0
         
         # 4. Standard features
         tech = row.get("technical_coverage", 0.0)

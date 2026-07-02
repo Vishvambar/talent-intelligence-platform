@@ -190,6 +190,15 @@ def train_ranker():
     with open(os.path.join(OUTPUT_DIR, "pipeline_manifest.json"), "w") as f:
         json.dump(manifest, f, indent=2)
         
+    with open(os.path.join(OUTPUT_DIR, "feature_list.json"), "w") as f:
+        json.dump(feature_cols, f)
+        
+    # Extract feature importance
+    importance = final_model.feature_importances_
+    fi_dict = {feat: float(imp) for feat, imp in zip(feature_cols, importance)}
+    with open(os.path.join(OUTPUT_DIR, "feature_importance.json"), "w") as f:
+        json.dump(fi_dict, f, indent=4)
+        
     print("✅ Phase 8B Complete! Model and full metadata suite saved.")
 
 if __name__ == "__main__":

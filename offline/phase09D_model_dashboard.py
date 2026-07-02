@@ -56,9 +56,9 @@ def generate_dashboard():
     e_top100 = get_top_ids(df, "ensemble_rank", 100)
     el_top100 = get_top_ids(elite_df, "elite_rank", 100)
     
-    overlap_lx = len(l_top100.intersection(x_top100))
-    overlap_te = len(t_top100.intersection(e_top100))
-    overlap_tel = len(t_top100.intersection(el_top100))
+    overlap_lx_pct = (len(l_top100.intersection(x_top100)) / 100.0) * 100
+    overlap_te_pct = (len(t_top100.intersection(e_top100)) / 100.0) * 100
+    overlap_tel_pct = (len(t_top100.intersection(el_top100)) / 100.0) * 100
     
     # ---------------------------------------------------------
     # ENSEMBLE GAINS
@@ -97,9 +97,9 @@ def generate_dashboard():
     md += f"- **Kendall Tau:** {kendall_corr:.4f}\n\n"
     
     md += "## 2. Overlap Cascade (Top 100)\n"
-    md += f"- **LightGBM vs XGBoost Overlap:** {overlap_lx}%\n"
-    md += f"- **Ensemble vs Teacher Overlap:** {overlap_te}%\n"
-    md += f"- **Elite vs Teacher Overlap:** {overlap_tel}%\n\n"
+    md += f"- **LightGBM vs XGBoost Overlap:** {overlap_lx_pct:.1f}%\n"
+    md += f"- **Ensemble vs Teacher Overlap:** {overlap_te_pct:.1f}%\n"
+    md += f"- **Elite vs Teacher Overlap:** {overlap_tel_pct:.1f}%\n\n"
     
     md += "## 3. Ensemble Gains\n"
     md += "| Metric | LightGBM Student | XGBoost OOF | Ensemble | Elite Rerank | Gain over LGBM (Elite) |\n"
