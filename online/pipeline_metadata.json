@@ -1,0 +1,17 @@
+{
+    "timestamp": "2026-07-02T15:39:46.794643",
+    "git_commit": "742f3c6a2958017d35467309eb20ebf001bbcdb8",
+    "model_version": "1.0",
+    "phase_versions": {
+        "phase08": "1.0",
+        "phase09": "1.0",
+        "phase10": "1.1",
+        "phase11": "2.0"
+    },
+    "execution_time_seconds": 0.092,
+    "feature_count": 23,
+    "blend_weights": {
+        "lgbm": 0.75,
+        "xgb": 0.25
+    }
+}
