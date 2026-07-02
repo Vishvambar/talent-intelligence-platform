@@ -20,16 +20,13 @@ Deterministic:        Yes
 Replay Tested:        Yes
 ```
 
-```text
-WHY THIS SYSTEM?
-
-✓ No API calls
-✓ No online LLMs
-✓ Deterministic
-✓ CPU only
-✓ Replay tested
-✓ Explainable
-```
+> **WHY THIS SYSTEM?**
+> ✓ No API calls
+> ✓ No online LLMs
+> ✓ Deterministic
+> ✓ CPU only
+> ✓ Replay tested
+> ✓ Explainable
 
 ## Overview
 This repository contains the deterministic, multi-modal **Recruiter Relevance Prediction Engine** for the Redrob Candidate Ranking Challenge. 
@@ -108,14 +105,12 @@ Upon successful execution, the pipeline will generate:
 
 ## Failure Modes
 
-```text
-If Evidence Bank missing      -> Abort
-If schema mismatch            -> Warning & Fallback
-If feature drift              -> Warning
-If runtime exceeds threshold  -> Warning
-If duplicate IDs              -> Abort
-If score non-monotonic        -> Abort
-```
+- **Missing Evidence Bank:** `Abort`
+- **Schema Mismatch:** `Warning & Fallback`
+- **Feature Drift:** `Warning`
+- **Runtime Exceeds 5m:** `Warning`
+- **Duplicate Candidate IDs:** `Abort`
+- **Non-Monotonic Score:** `Abort`
 
 ## Repository Structure
 
@@ -129,7 +124,6 @@ Project Root
 ├── EXECUTIVE_SUMMARY.md # The 90-second CEO project pitch
 ├── WHY_THIS_SYSTEM.md   # Explicit engineering decisions and tradeoffs
 ├── LESSONS_LEARNED.md   # Architectural pivot history
-├── METHODOLOGY.md       # 200-word pipeline summary
 ├── CHANGELOG.md         # Iteration history
 ├── LICENSE              # MIT License
 ├── Makefile             # Sandbox quick-start commands
