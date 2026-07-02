@@ -19,13 +19,14 @@ Retrieval:            Hybrid BM25 + Dense
 Deterministic:        Yes
 Replay Tested:        Yes
 ```
-
-> **WHY THIS SYSTEM?**
-> ✓ CPU-only inference
-> ✓ Zero online LLM calls
-> ✓ Fully deterministic
-> ✓ Replay verified
-> ✓ Explainable outputs
+```text
+**WHY THIS SYSTEM?**
+✓ CPU-only inference
+✓ Zero online LLM calls
+✓ Fully deterministic
+✓ Replay verified
+✓ Explainable outputs
+```
 
 ## Overview
 This repository contains the deterministic, multi-modal **Recruiter Relevance Prediction Engine** for the Redrob Candidate Ranking Challenge. 
